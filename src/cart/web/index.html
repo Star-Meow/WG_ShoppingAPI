@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>商品目錄 - 購物車結算系統</title>
+  <style>
+    :root {
+      --accent: #1a5fb4;
+      --border: #d5d9e0;
+      --muted: #6b7280;
+      --error-bg: #fdecea;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 1rem;
+      font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+      color: #1f2933;
+      background-color: #f7f8fa;
+    }
+
+    header {
+      max-width: 720px;
+      margin: 0 auto 1.5rem;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 0.25rem;
+      font-size: 1.5rem;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    section {
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background-color: #ffffff;
+    }
+
+    section h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.15rem;
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 0.35rem;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    li {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    li:last-child {
+      border-bottom: none;
+    }
+
+    .price {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .status {
+      padding: 1rem;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .error {
+      padding: 1rem;
+      border: 1px solid #f5c6cb;
+      border-radius: 0.5rem;
+      background-color: var(--error-bg);
+      color: #842029;
+    }
+
+    .error h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.1rem;
+      color: #842029;
+      border: none;
+    }
+
+    .error p {
+      margin: 0 0 0.5rem;
+    }
+
+    .error p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* 可見的鍵盤 focus 樣式 */
+    a:focus-visible,
+    button:focus-visible,
+    [tabindex]:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: 0.25rem;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 0.5rem;
+      }
+
+      header h1 {
+        font-size: 1.3rem;
+      }
+
+      li {
+        flex-direction: column;
+        gap: 0.15rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>商品目錄</h1>
+    <p>依品類瀏覽全部 18 項商品</p>
+  </header>
+
+  <main id="catalog">
+    <p class="status">載入商品中…</p>
+  </main>
+
+  <script>
+    // 從後端取得商品資料;失敗時拋出錯誤,由呼叫端處理
+    async function fetchProducts() {
+      const response = await fetch("/api/products");
+      if (!response.ok) {
+        throw new Error("伺服器回應 HTTP " + response.status);
+      }
+      return response.json();
+    }
+
+    // 組出單一商品的一筆清單項目
+    function buildProductRow(product) {
+      const item = document.createElement("li");
+
+      const name = document.createElement("span");
+      name.textContent = product.name;
+
+      const price = document.createElement("span");
+      price.textContent = product.price + " 元";
+      price.className = "price";
+
+      item.appendChild(name);
+      item.appendChild(price);
+      return item;
+    }
+
+    // 組出單一品類的一個區塊
+    function buildCategorySection(group) {
+      const section = document.createElement("section");
+
+      const heading = document.createElement("h2");
+      heading.textContent = group.category;
+
+      const list = document.createElement("ul");
+      for (const product of group.products) {
+        list.appendChild(buildProductRow(product));
+      }
+
+      section.appendChild(heading);
+      section.appendChild(list);
+      return section;
+    }
+
+    // 顯示所有品類的商品(成功狀態)
+    function renderProducts(container, groups) {
+      container.replaceChildren();
+      for (const group of groups) {
+        container.appendChild(buildCategorySection(group));
+      }
+    }
+
+    // 顯示載入失敗的訊息與排除方式
+    function renderError(container, error) {
+      container.replaceChildren();
+
+      const box = document.createElement("div");
+      box.className = "error";
+
+      const title = document.createElement("h2");
+      title.textContent = "無法載入商品";
+
+      const detail = document.createElement("p");
+      detail.textContent = "錯誤:" + error.message;
+
+      const hint = document.createElement("p");
+      hint.textContent = "請確認伺服器已啟動( uvicorn cart.main:app --reload --app-dir src ),並檢查 http://127.0.0.1:8000/docs 是否能開啟,之後重新整理頁面。";
+
+      box.appendChild(title);
+      box.appendChild(detail);
+      box.appendChild(hint);
+      container.appendChild(box);
+    }
+
+    // 頁面載入後立即執行的主流程
+    async function main() {
+      const container = document.getElementById("catalog");
+      try {
+        const groups = await fetchProducts();
+        renderProducts(container, groups);
+      } catch (error) {
+        renderError(container, error);
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>

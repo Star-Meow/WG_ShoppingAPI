@@ -1,0 +1,9 @@
+[project]
+name = "shopping-cart"
+version = "0.1.0"
+description = "電商購物車結算系統(WisdomGarden Dev 面試題 MVP)"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
