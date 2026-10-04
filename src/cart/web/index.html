@@ -7,6 +7,7 @@
   <style>
     :root {
       --accent: #1a5fb4;
+      --accent-dark: #154a8a;
       --border: #d5d9e0;
       --muted: #6b7280;
       --error-bg: #fdecea;
@@ -25,8 +26,8 @@
     }
 
     header {
-      max-width: 720px;
-      margin: 0 auto 1.5rem;
+      max-width: 960px;
+      margin: 0 auto 1rem;
       text-align: center;
     }
 
@@ -36,59 +37,176 @@
     }
 
     header p {
-      margin: 0;
+      margin: 0 0 1rem;
       color: var(--muted);
       font-size: 0.9rem;
     }
 
+    /* 查詢框:置於頁面頂部 */
+    .search-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .search-box__label {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .search-box input {
+      width: 100%;
+      max-width: 480px;
+      padding: 0.6rem 0.9rem;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 2rem;
+      background-color: #ffffff;
+      color: #1f2933;
+    }
+
     main {
-      max-width: 720px;
+      max-width: 960px;
       margin: 0 auto;
     }
 
-    section {
-      margin-bottom: 1.5rem;
-      padding: 1rem;
+    /* 分類導引欄:查詢框下方的一排可點擇分頁 */
+    .category-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+    }
+
+    .category-tabs__item {
+      flex: 0 0 auto;
+      padding: 0.45rem 1.1rem;
+      font-size: 0.95rem;
+      color: var(--accent);
+      background-color: #ffffff;
+      border: 1px solid var(--accent);
+      border-radius: 2rem;
+      cursor: pointer;
+    }
+
+    .category-tabs__item:hover {
+      background-color: #eaf1fb;
+    }
+
+    /* 目前選中的分類以實心色塊標示 */
+    .category-tabs__item--active {
+      color: #ffffff;
+      background-color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    /* 商品卡片 grid */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .product-card {
+      display: flex;
+      flex-direction: column;
+      padding: 0.75rem;
       border: 1px solid var(--border);
       border-radius: 0.5rem;
       background-color: #ffffff;
     }
 
-    section h2 {
+    /* 品項圖片:以品類顏色 + 品名首字組成的佔位圖 */
+    .product-image {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 4 / 3;
+      margin-bottom: 0.6rem;
+      border-radius: 0.35rem;
+      color: #ffffff;
+      font-size: 2.5rem;
+      font-weight: 700;
+      user-select: none;
+    }
+
+    .product-card__name {
+      margin: 0 0 0.35rem;
+      font-size: 1rem;
+      line-height: 1.4;
+    }
+
+    .product-card__price {
       margin: 0 0 0.75rem;
       font-size: 1.15rem;
-      color: var(--accent);
-      border-bottom: 2px solid var(--accent);
-      padding-bottom: 0.35rem;
-    }
-
-    ul {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    li {
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      padding: 0.5rem 0;
-      border-bottom: 1px dashed var(--border);
-    }
-
-    li:last-child {
-      border-bottom: none;
-    }
-
-    .price {
+      font-weight: 700;
+      color: var(--accent-dark);
       font-variant-numeric: tabular-nums;
-      white-space: nowrap;
+    }
+
+    /* 數量調整:- [數量] +,置於加入購物車按鈕之上 */
+    .quantity-stepper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .quantity-stepper__button {
+      width: 2rem;
+      height: 2rem;
+      font-size: 1.1rem;
+      line-height: 1;
+      color: var(--accent);
+      background-color: #ffffff;
+      border: 1px solid var(--accent);
+      border-radius: 0.35rem;
+      cursor: pointer;
+    }
+
+    .quantity-stepper__button:hover:not(:disabled) {
+      background-color: #eaf1fb;
+    }
+
+    .quantity-stepper__button:disabled {
+      color: #c0c6cf;
+      border-color: #c0c6cf;
+      cursor: not-allowed;
+    }
+
+    .quantity-stepper__value {
+      min-width: 2rem;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .product-card__button {
+      margin-top: auto;
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 0.95rem;
+      color: #ffffff;
+      background-color: var(--accent);
+      border: none;
+      border-radius: 0.35rem;
+      cursor: pointer;
+    }
+
+    .product-card__button:hover {
+      background-color: var(--accent-dark);
     }
 
     .status {
       padding: 1rem;
       text-align: center;
       color: var(--muted);
+      grid-column: 1 / -1;
     }
 
     .error {
@@ -97,13 +215,13 @@
       border-radius: 0.5rem;
       background-color: var(--error-bg);
       color: #842029;
+      grid-column: 1 / -1;
     }
 
     .error h2 {
       margin: 0 0 0.5rem;
       font-size: 1.1rem;
       color: #842029;
-      border: none;
     }
 
     .error p {
@@ -114,9 +232,157 @@
       margin-bottom: 0;
     }
 
+    /* 右下角懸浮購物車按鈕:固定在畫面上,不隨捲動消失 */
+    .cart-fab {
+      position: fixed;
+      right: 1.5rem;
+      bottom: 1.5rem;
+      width: 3.5rem;
+      height: 3.5rem;
+      font-size: 1.6rem;
+      color: #ffffff;
+      background-color: var(--accent);
+      border: none;
+      border-radius: 50%;
+      box-shadow: 0 0.25rem 0.6rem rgba(0, 0, 0, 0.28);
+      cursor: pointer;
+      z-index: 100;
+    }
+
+    .cart-fab:hover {
+      background-color: var(--accent-dark);
+    }
+
+    /* 購物車內商品總數的角標 */
+    .cart-fab__badge {
+      position: absolute;
+      top: -0.35rem;
+      right: -0.35rem;
+      min-width: 1.4rem;
+      height: 1.4rem;
+      padding: 0 0.3rem;
+      font-size: 0.8rem;
+      line-height: 1.4rem;
+      color: #ffffff;
+      background-color: #d93025;
+      border-radius: 0.7rem;
+    }
+
+    .cart-fab__badge--hidden {
+      display: none;
+    }
+
+    /* 點開懸浮鈕後展開的購物籃畫面 */
+    .cart-panel {
+      position: fixed;
+      right: 1.5rem;
+      bottom: 5.5rem;
+      width: min(360px, calc(100vw - 3rem));
+      max-height: 60vh;
+      overflow-y: auto;
+      padding: 1rem;
+      background-color: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.25);
+      z-index: 100;
+    }
+
+    .cart-panel[hidden] {
+      display: none;
+    }
+
+    .cart-panel__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .cart-panel__title {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .cart-panel__close {
+      padding: 0.25rem 0.6rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+      background-color: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 0.35rem;
+      cursor: pointer;
+    }
+
+    .cart-panel__empty {
+      margin: 0;
+      padding: 1rem 0;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .cart-panel__row {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .cart-panel__name {
+      font-size: 0.95rem;
+    }
+
+    .cart-panel__unit {
+      margin-top: 0.2rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .cart-panel__lineTotal {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .cart-panel__total {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.75rem;
+      padding-top: 0.6rem;
+      border-top: 2px solid var(--accent);
+      font-weight: 700;
+      font-size: 1.05rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 加入購物車的提示:短暫顯示後自動消失 */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 1.5rem;
+      transform: translateX(-50%);
+      padding: 0.7rem 1.2rem;
+      font-size: 0.95rem;
+      color: #ffffff;
+      background-color: #1f2933;
+      border-radius: 2rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease-in-out;
+      z-index: 200;
+    }
+
+    .toast--visible {
+      opacity: 1;
+    }
+
     /* 可見的鍵盤 focus 樣式 */
     a:focus-visible,
     button:focus-visible,
+    input:focus-visible,
     [tabindex]:focus-visible {
       outline: 3px solid var(--accent);
       outline-offset: 2px;
@@ -132,9 +398,27 @@
         font-size: 1.3rem;
       }
 
-      li {
-        flex-direction: column;
-        gap: 0.15rem;
+      .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 0.6rem;
+      }
+
+      .product-image {
+        font-size: 2rem;
+      }
+
+      .product-card {
+        padding: 0.6rem;
+      }
+
+      .cart-fab {
+        right: 1rem;
+        bottom: 1rem;
+      }
+
+      .cart-panel {
+        right: 1rem;
+        bottom: 5rem;
       }
     }
   </style>
@@ -143,13 +427,60 @@
   <header>
     <h1>商品目錄</h1>
     <p>依品類瀏覽全部 18 項商品</p>
+    <div class="search-box">
+      <label class="search-box__label" for="search-input">搜尋商品</label>
+      <input type="search" id="search-input" placeholder="輸入商品名稱進行搜尋" autocomplete="off">
+    </div>
   </header>
 
   <main id="catalog">
-    <p class="status">載入商品中…</p>
+    <nav class="category-tabs" id="category-tabs" aria-label="商品品類"></nav>
+    <div class="product-grid" id="product-grid">
+      <p class="status">載入商品中…</p>
+    </div>
   </main>
 
+  <button class="cart-fab" id="cart-fab" type="button" aria-label="開啟購物車">
+    🛒
+    <span class="cart-fab__badge cart-fab__badge--hidden" id="cart-fab__badge">0</span>
+  </button>
+
+  <section class="cart-panel" id="cart-panel" hidden aria-label="購物車內容">
+    <div class="cart-panel__header">
+      <h2 class="cart-panel__title">購物車</h2>
+      <button class="cart-panel__close" id="cart-close" type="button">關閉</button>
+    </div>
+    <div id="cart-panel__body"></div>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
   <script>
+    // 目前頁面的狀態:全部商品、品類順序、選中的分類、搜尋關鍵字
+    const state = {
+      allProducts: [],
+      categoryNames: [],
+      category: "全部",
+      keyword: "",
+    };
+
+    // 每個品類對應的佔位圖顏色
+    const CATEGORY_COLORS = {
+      "電子": "#1a5fb4",
+      "食品": "#2e7d32",
+      "日用品": "#e65100",
+      "酒類": "#6a1b9a",
+    };
+
+    // 每張卡片目前調整到的數量,品名為鍵;未設定時預設為 1
+    const quantities = {};
+
+    // 購物車內容,品名為鍵,值含單價字串與數量;目前先存在前端記憶體
+    const cart = {};
+
+    // 目前使用的提示計時器,用來在重複點擊時取消上一次的隱藏排程
+    let toastTimer = null;
+
     // 從後端取得商品資料;失敗時拋出錯誤,由呼叫端處理
     async function fetchProducts() {
       const response = await fetch("/api/products");
@@ -159,45 +490,320 @@
       return response.json();
     }
 
-    // 組出單一商品的一筆清單項目
-    function buildProductRow(product) {
-      const item = document.createElement("li");
-
-      const name = document.createElement("span");
-      name.textContent = product.name;
-
-      const price = document.createElement("span");
-      price.textContent = product.price + " 元";
-      price.className = "price";
-
-      item.appendChild(name);
-      item.appendChild(price);
-      return item;
-    }
-
-    // 組出單一品類的一個區塊
-    function buildCategorySection(group) {
-      const section = document.createElement("section");
-
-      const heading = document.createElement("h2");
-      heading.textContent = group.category;
-
-      const list = document.createElement("ul");
-      for (const product of group.products) {
-        list.appendChild(buildProductRow(product));
-      }
-
-      section.appendChild(heading);
-      section.appendChild(list);
-      return section;
-    }
-
-    // 顯示所有品類的商品(成功狀態)
-    function renderProducts(container, groups) {
-      container.replaceChildren();
+    // 把後端依品類分組的資料攤平成單一清單,並在每筆商品上補所屬品類;
+    // 同時記下品類順序,供導引欄使用
+    function flattenProducts(groups) {
+      const allProducts = [];
+      const categoryNames = [];
       for (const group of groups) {
-        container.appendChild(buildCategorySection(group));
+        categoryNames.push(group.category);
+        for (const product of group.products) {
+          allProducts.push({
+            name: product.name,
+            price: product.price,
+            category: group.category,
+          });
+        }
       }
+      return { allProducts: allProducts, categoryNames: categoryNames };
+    }
+
+    // 判斷商品是否屬於目前選中的分類;「全部」表示不限制
+    function matchesCategory(product, category) {
+      return category === "全部" || product.category === category;
+    }
+
+    // 判斷商品名稱是否包含搜尋關鍵字(不分大小寫)
+    function matchesKeyword(product, keyword) {
+      if (keyword === "") {
+        return true;
+      }
+      return product.name.toLowerCase().includes(keyword.toLowerCase());
+    }
+
+    // 依目前選中的分類與關鍵字過濾商品
+    function filterProducts() {
+      const filtered = [];
+      for (const product of state.allProducts) {
+        if (!matchesCategory(product, state.category)) {
+          continue;
+        }
+        if (!matchesKeyword(product, state.keyword)) {
+          continue;
+        }
+        filtered.push(product);
+      }
+      return filtered;
+    }
+
+    // 組出查詢框下方的分類導引欄,品類順序沿用後端回傳的順序
+    function renderCategoryTabs() {
+      const tabs = document.getElementById("category-tabs");
+      const categoryNames = ["全部"].concat(state.categoryNames);
+      tabs.replaceChildren();
+      for (const categoryName of categoryNames) {
+        tabs.appendChild(buildCategoryTab(categoryName));
+      }
+    }
+
+    // 組出導引欄的單一分頁;點擊後切換目前分類,並清掉搜尋關鍵字
+    function buildCategoryTab(categoryName) {
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = "category-tabs__item";
+      tab.textContent = categoryName;
+      if (categoryName === state.category) {
+        tab.classList.add("category-tabs__item--active");
+      }
+      tab.addEventListener("click", function () {
+        state.category = categoryName;
+        state.keyword = "";
+        document.getElementById("search-input").value = "";
+        renderCategoryTabs();
+        renderProductGrid();
+      });
+      return tab;
+    }
+
+    // 組出單一商品卡片(佔位圖 + 品名 + 價格 + 數量調整 + 加入購物車按鈕)
+    function buildProductCard(product) {
+      const card = document.createElement("article");
+      card.className = "product-card";
+
+      const image = buildProductImage(product);
+      const name = document.createElement("h3");
+      name.className = "product-card__name";
+      name.textContent = product.name;
+      const price = document.createElement("p");
+      price.className = "product-card__price";
+      price.textContent = product.price + " 元";
+      const stepper = buildQuantityStepper(product);
+      const button = buildAddToCartButton(product);
+
+      card.append(image, name, price, stepper, button);
+      return card;
+    }
+
+    // 組出品項圖片:以品類顏色為底,中間顯示品名首字
+    function buildProductImage(product) {
+      const image = document.createElement("div");
+      image.className = "product-image";
+      image.style.backgroundColor = CATEGORY_COLORS[product.category] || "#6b7280";
+      image.textContent = product.name.charAt(0);
+      return image;
+    }
+
+    // 取得某商品目前調整到的數量;未調整過為 1
+    function getQuantity(productName) {
+      return quantities[productName] || 1;
+    }
+
+    // 組出數量調整元件(- [數量] +),數量最低為 1
+    function buildQuantityStepper(product) {
+      const stepper = document.createElement("div");
+      stepper.className = "quantity-stepper";
+
+      const minusButton = document.createElement("button");
+      minusButton.type = "button";
+      minusButton.className = "quantity-stepper__button";
+      minusButton.textContent = "−";
+      minusButton.setAttribute("aria-label", "減少 " + product.name + " 的數量");
+
+      const value = document.createElement("span");
+      value.className = "quantity-stepper__value";
+      value.textContent = getQuantity(product.name);
+
+      const plusButton = document.createElement("button");
+      plusButton.type = "button";
+      plusButton.className = "quantity-stepper__button";
+      plusButton.textContent = "+";
+      plusButton.setAttribute("aria-label", "增加 " + product.name + " 的數量");
+
+      minusButton.addEventListener("click", function () {
+        const current = getQuantity(product.name);
+        if (current <= 1) {
+          return;
+        }
+        quantities[product.name] = current - 1;
+        updateStepper(product.name, value, minusButton);
+      });
+
+      plusButton.addEventListener("click", function () {
+        const current = getQuantity(product.name);
+        quantities[product.name] = current + 1;
+        updateStepper(product.name, value, minusButton);
+      });
+
+      updateStepper(product.name, value, minusButton);
+
+      stepper.append(minusButton, value, plusButton);
+      return stepper;
+    }
+
+    // 更新數量顯示,並在數量為 1 時停用減號鈕
+    function updateStepper(productName, value, minusButton) {
+      const current = getQuantity(productName);
+      value.textContent = current;
+      minusButton.disabled = current <= 1;
+    }
+
+    // 組出加入購物車按鈕;點擊後把目前數量加進購物車並顯示提示
+    function buildAddToCartButton(product) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "product-card__button";
+      button.textContent = "加入購物車";
+      button.addEventListener("click", function () {
+        addToCart(product);
+        showCartToast(product.name, getQuantity(product.name));
+      });
+      return button;
+    }
+
+    // 把商品依目前數量加進購物車;已有同品項則累加數量
+    function addToCart(product) {
+      const quantity = getQuantity(product.name);
+      const existing = cart[product.name];
+      if (existing) {
+        existing.qty = existing.qty + quantity;
+      } else {
+        cart[product.name] = {
+          name: product.name,
+          price: product.price,
+          qty: quantity,
+        };
+      }
+      renderCartBadge();
+      renderCartPanel();
+    }
+
+    // 把價格字串(如 "2399.00")換算成整數分,避免 float 小數誤差
+    function priceToCents(priceText) {
+      const parts = priceText.split(".");
+      const dollars = Number.parseInt(parts[0], 10) || 0;
+      let cents = 0;
+      if (parts.length > 1) {
+        const fraction = parts[1].padStart(2, "0").slice(0, 2);
+        cents = Number.parseInt(fraction, 10) || 0;
+      }
+      return dollars * 100 + cents;
+    }
+
+    // 把整數分換回價格字串(如 "2399.00")
+    function centsToText(cents) {
+      const dollars = Math.floor(cents / 100);
+      const fraction = (cents % 100).toString().padStart(2, "0");
+      return dollars + "." + fraction;
+    }
+
+    // 計算購物車內商品的總件數(角標用)
+    function calculateCartCount() {
+      let count = 0;
+      for (const productName of Object.keys(cart)) {
+        count = count + cart[productName].qty;
+      }
+      return count;
+    }
+
+    // 計算購物車合計金額(整數分)
+    function calculateCartTotalCents() {
+      let totalCents = 0;
+      for (const productName of Object.keys(cart)) {
+        const item = cart[productName];
+        totalCents = totalCents + priceToCents(item.price) * item.qty;
+      }
+      return totalCents;
+    }
+
+    // 更新懸浮鈕上的商品總數角標;總數為 0 時隱藏
+    function renderCartBadge() {
+      const badge = document.getElementById("cart-fab__badge");
+      const count = calculateCartCount();
+      badge.textContent = count;
+      badge.classList.toggle("cart-fab__badge--hidden", count === 0);
+    }
+
+    // 重新繪製購物籃畫面;空車時顯示提示,有品項時逐項列出並算合計
+    function renderCartPanel() {
+      const body = document.getElementById("cart-panel__body");
+      body.replaceChildren();
+
+      const productNames = Object.keys(cart);
+      if (productNames.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "cart-panel__empty";
+        empty.textContent = "購物車是空的";
+        body.appendChild(empty);
+        return;
+      }
+
+      for (const productName of productNames) {
+        body.appendChild(buildCartRow(cart[productName]));
+      }
+
+      const total = document.createElement("div");
+      total.className = "cart-panel__total";
+      const totalLabel = document.createElement("span");
+      totalLabel.textContent = "合計";
+      const totalValue = document.createElement("span");
+      totalValue.textContent = centsToText(calculateCartTotalCents()) + " 元";
+      total.append(totalLabel, totalValue);
+      body.appendChild(total);
+    }
+
+    // 組出購物籃內的單一品項(品名、單價 × 數量、該項小計)
+    function buildCartRow(item) {
+      const row = document.createElement("div");
+      row.className = "cart-panel__row";
+
+      const info = document.createElement("div");
+      const name = document.createElement("div");
+      name.className = "cart-panel__name";
+      name.textContent = item.name;
+      const unit = document.createElement("div");
+      unit.className = "cart-panel__unit";
+      unit.textContent = item.price + " 元 × " + item.qty;
+      info.append(name, unit);
+
+      const lineTotal = document.createElement("div");
+      lineTotal.className = "cart-panel__lineTotal";
+      lineTotal.textContent = centsToText(priceToCents(item.price) * item.qty) + " 元";
+
+      row.append(info, lineTotal);
+      return row;
+    }
+
+    // 顯示「已加入購物車」的提示,2 秒後自動消失
+    function showCartToast(productName, quantity) {
+      const toast = document.getElementById("toast");
+      toast.textContent = "已加入購物車:" + productName + " × " + quantity;
+      toast.classList.add("toast--visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        toast.classList.remove("toast--visible");
+      }, 2000);
+    }
+
+    // 顯示過濾後的商品;查無商品時顯示提示
+    function renderProductGrid() {
+      const grid = document.getElementById("product-grid");
+      const filtered = filterProducts();
+      if (filtered.length === 0) {
+        renderEmpty(grid);
+        return;
+      }
+      grid.replaceChildren();
+      for (const product of filtered) {
+        grid.appendChild(buildProductCard(product));
+      }
+    }
+
+    // 顯示查無商品的提示
+    function renderEmpty(container) {
+      const message = document.createElement("p");
+      message.className = "status";
+      message.textContent = "查無符合的商品";
+      container.replaceChildren(message);
     }
 
     // 顯示載入失敗的訊息與排除方式
@@ -216,20 +822,47 @@
       const hint = document.createElement("p");
       hint.textContent = "請確認伺服器已啟動( uvicorn cart.main:app --reload --app-dir src ),並檢查 http://127.0.0.1:8000/docs 是否能開啟,之後重新整理頁面。";
 
-      box.appendChild(title);
-      box.appendChild(detail);
-      box.appendChild(hint);
+      box.append(title, detail, hint);
       container.appendChild(box);
+    }
+
+    // 綁定查詢框:每輸入一個字就依名稱過濾目前頁面的商品
+    function bindSearchInput() {
+      const input = document.getElementById("search-input");
+      input.addEventListener("input", function (event) {
+        state.keyword = event.target.value.trim();
+        renderProductGrid();
+      });
+    }
+
+    // 綁定懸浮購物車鈕:點擊展開或收起購物籃畫面
+    function bindCartFab() {
+      const fab = document.getElementById("cart-fab");
+      const panel = document.getElementById("cart-panel");
+      fab.addEventListener("click", function () {
+        panel.hidden = !panel.hidden;
+      });
+      const close = document.getElementById("cart-close");
+      close.addEventListener("click", function () {
+        panel.hidden = true;
+      });
     }
 
     // 頁面載入後立即執行的主流程
     async function main() {
-      const container = document.getElementById("catalog");
+      const grid = document.getElementById("product-grid");
+      bindSearchInput();
+      bindCartFab();
+      renderCartBadge();
       try {
         const groups = await fetchProducts();
-        renderProducts(container, groups);
+        const flattened = flattenProducts(groups);
+        state.allProducts = flattened.allProducts;
+        state.categoryNames = flattened.categoryNames;
+        renderCategoryTabs();
+        renderProductGrid();
       } catch (error) {
-        renderError(container, error);
+        renderError(grid, error);
       }
     }
 
