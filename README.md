@@ -4,12 +4,27 @@
 
 ## 目前完成範圍
 
+**後端**
+
 - 商品目錄:4 個品類、共 18 項商品
 - `GET /api/products`:依品類分組回傳商品(價格為字串)
-- 前端商品瀏覽頁 `http://127.0.0.1:8000/`
-- 自動化測試(pytest)
+- 自動化測試(pytest,12 項全數通過)
 
-尚未實作(已建立空殼,未含邏輯):購物車、促銷折扣、優惠券、結算、後台管理、CLI。
+**前端商品瀏覽頁**(<http://127.0.0.1:8000/>)
+
+- 頂部查詢框:輸入即依品名過濾(純前端)
+- 分類導引欄:點擊分頁只顯示該品類品項
+- 商品卡片:純 CSS 佔位圖、品名、單價
+- 數量調整(`- [n] +`)與「加入購物車」按鈕
+- 右下角懸浮購物車鈕,點開展開購物籃畫面(品項、小計、合計)
+
+**文件**
+
+- [docs/requirements.md](docs/requirements.md):已確認業務規則與驗收案例
+- [docs/architecture.md](docs/architecture.md):分層、依賴方向、資料職責分類與風格規則
+- [docs/decisions.md](docs/decisions.md):評估過後**不採用**的方案與理由(如:為何不用 DB、為何不做登入)
+
+尚未實作(已建立空殼,未含邏輯):購物車後端、促銷折扣、優惠券、結算、後台管理、CLI。
 
 ## 環境設定
 
@@ -92,4 +107,5 @@ shopping_cart/
 ```
 
 分層與依賴方向、程式風格規則詳見 [docs/architecture.md](docs/architecture.md);
-已確認的業務規則詳見 [docs/requirements.md](docs/requirements.md)。
+已確認的業務規則詳見 [docs/requirements.md](docs/requirements.md);
+評估過後不採用的方案與理由詳見 [docs/decisions.md](docs/decisions.md)。
