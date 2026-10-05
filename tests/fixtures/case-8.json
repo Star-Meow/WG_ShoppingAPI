@@ -1,0 +1,11 @@
+{
+  "date": "2015-11-11",
+  "items": [
+    {"name": "餅乾", "category": "食品", "qty": 3, "unitPrice": "0.10"},
+    {"name": "蛋糕", "category": "食品", "qty": 1, "unitPrice": "0.125"}
+  ],
+  "promotions": [],
+  "coupons": [
+    {"expiryDate": "2016-03-02", "minSpend": "0.40", "discount": "0.10"}
+  ]
+}

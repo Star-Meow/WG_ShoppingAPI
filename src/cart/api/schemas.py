@@ -1,73 +1,59 @@
-"""API 層的回傳資料結構(Pydantic schema)。"""
+"""API 層的資料結構(Pydantic schema)。
 
-from pydantic import BaseModel
+金額與日期欄位一律為字串:金額避免 JSON 數字還原成 float,日期由 service 解析。
+欄名沿用規格的 camelCase。
+"""
+
+from pydantic import BaseModel, Field
 
 
-class ProductOut(BaseModel):
-    """回傳給前端的單一商品,價格固定為字串以避免 float 誤差。"""
+class LineItemIn(BaseModel):
+    """購物車項目:品名、品類、數量與單價。單價由請求帶入,不查目錄。"""
 
     name: str
-    price: str
-
-
-class CategoryGroupOut(BaseModel):
-    """回傳給前端的單一品類分組。"""
-
     category: str
-    products: list[ProductOut]
+    qty: int = Field(gt=0, description="數量必須為正整數")
+    unitPrice: str = Field(description="單價,字串以避免 float 誤差")
 
 
-class CouponOut(BaseModel):
-    """回傳給前端的單張優惠券,金額與日期皆為字串。"""
+class PromotionIn(BaseModel):
+    """促銷:乘法 rate 與加法 effect 可同時存在;date/category 省略代表全適用。"""
 
-    id: str
-    name: str
-    expiry_date: str
-    threshold: str
-    discount: str
-
-
-class CouponOptionOut(BaseModel):
-    """回傳給前端的單張優惠券與其在目前購物車下的可用狀態。
-
-    status 由後端依促銷後金額與結算日判斷:usable / expired / below_threshold。
-    """
-
-    id: str
-    name: str
-    expiry_date: str
-    threshold: str
-    discount: str
-    status: str
+    date: str | None = None
+    category: str | None = None
+    rate: str | None = None
+    effect: str | None = None
 
 
-class CheckoutItemIn(BaseModel):
-    """前端送來的購物車項目;只收商品名與數量,不收價格(見 decisions.md D4)。"""
+class CouponIn(BaseModel):
+    """折價券:discount 為正數(自動轉負),effect 直接指定加減值。"""
 
-    name: str
-    quantity: int
-
-
-class CheckoutRequest(BaseModel):
-    """結算請求:購物車明細與(可選的)本次優惠券代號。"""
-
-    items: list[CheckoutItemIn]
-    coupon_id: str | None = None
+    expiryDate: str | None = None
+    minSpend: str | None = None
+    discount: str | None = None
+    effect: str | None = None
 
 
-class CouponOptionsRequest(BaseModel):
-    """優惠券可選清單請求:只收購物車明細,用來判斷每張券的門檻狀態。"""
+class CalculateRequest(BaseModel):
+    """計算請求:交易日、購物車明細,以及可省略的促銷與折價券清單。"""
 
-    items: list[CheckoutItemIn]
+    date: str = Field(description="交易日,支援 YYYY-MM-DD / YYYY.MM.DD / YYYY/MM/DD")
+    items: list[LineItemIn] = Field(min_length=1, description="購物車明細不得為空")
+    promotions: list[PromotionIn] = Field(default_factory=list)
+    coupons: list[CouponIn] = Field(default_factory=list)
 
 
-class CheckoutResultOut(BaseModel):
-    """結算結果明細:把計算過程逐項回傳,供結帳頁顯示。"""
+class CouponResultOut(BaseModel):
+    """單張折價券的套用結果。reason 為 expired 或 below_min_spend,套用成功為 null。"""
 
-    original_subtotal: str
-    promoted_subtotal: str
-    coupon_discount: str
+    index: int
+    applied: bool
+    reason: str | None = None
+
+
+class CalculateResultOut(BaseModel):
+    """計算結果:subtotal 不四捨五入,total 四捨五入到小數 2 位。"""
+
+    subtotal: str
     total: str
-    coupon_status: str
-    applied_coupon_name: str | None
-    applied_promotion_names: list[str]
+    couponResults: list[CouponResultOut]

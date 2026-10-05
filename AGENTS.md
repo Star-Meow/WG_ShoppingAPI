@@ -6,12 +6,12 @@
 
 | 想知道的東西 | 看哪裡 |
 | --- | --- |
-| 業務規則、驗收案例、商品目錄、待決定事項 | [docs/requirements.md](docs/requirements.md) |
+| 業務規則、API 規格、驗收案例 | [docs/requirements.md](docs/requirements.md) |
 | 哪些功能已實作、哪些還沒、下一步順序 | [docs/feature-checklist.md](docs/feature-checklist.md) |
 | 測了什麼、測試覆蓋的缺口 | [docs/test-checklist.md](docs/test-checklist.md) |
 | 分層依賴、模組職責 | [docs/architecture.md](docs/architecture.md) |
 | 評估過後不採用的方案與理由(為何不用 DB、為何不做登入等) | [docs/decisions.md](docs/decisions.md) |
-| 各功能的實作方式與瀏覽器實測紀錄 | [docs/acceptance-report.md](docs/acceptance-report.md) |
+| 各功能的實作方式與 API 實測紀錄 | [docs/acceptance-report.md](docs/acceptance-report.md) |
 
 ## 一、專案概述
 
@@ -25,16 +25,15 @@
 | --- | --- | --- |
 | Python | 3.10+ | 使用 `list[X]` 等 type hint 語法 |
 | 後端 | FastAPI | 由 uvicorn 執行;程式碼中**不需要** `import uvicorn` |
-| 伺服器 | uvicorn | 啟動指令:`uvicorn cart.main:app --reload --app-dir src` |
-| 前端 | 純 HTML + 原生 JavaScript(`fetch`) | **禁止** Vue / React / Alpine.js,**禁止** npm / build |
+| 伺服器 | uvicorn | 啟動指令:`uvicorn cart.main:app --port 3000 --app-dir src` |
 | 資料驗證 | Pydantic | schema 只能出現在 `api/` 層 |
-| 金額 | `Decimal` | **嚴禁 float**;API 輸出為字串,最後四捨五入到小數 2 位 |
+| 金額 | `Decimal` | **嚴禁 float**;API 輸出為字串,`total` 四捨五入到小數 2 位 |
 | 測試 | pytest | 測試 HTTP 用 `TestClient`(依賴 httpx) |
 | 套件管理 | pip + venv | 套件**只裝在 `.venv` 內**,不得裝到系統 Python |
 
 依賴白名單(只允許下列套件):
 
-- 執行:`fastapi`、`uvicorn`
+- 執行:`fastapi`、`uvicorn`、`pydantic`
 - 開發:`pytest`、`httpx`
 
 **不建立 Makefile、不建立 GitHub Actions。**
@@ -67,12 +66,11 @@ pip install -r requirements.txt       # 僅執行
 ### 啟動伺服器
 
 ```bash
-uvicorn cart.main:app --reload --app-dir src
+uvicorn cart.main:app --port 3000 --app-dir src
 ```
 
-- 商品瀏覽頁:<http://127.0.0.1:8000/>
-- API 文件:<http://127.0.0.1:8000/docs>
-- 商品 API:<http://127.0.0.1:8000/api/products>
+- 計算 API:<http://localhost:3000/api/calculate>(POST)
+- API 文件:<http://localhost:3000/docs>
 
 ### 執行測試
 
@@ -80,40 +78,36 @@ uvicorn cart.main:app --reload --app-dir src
 pytest
 ```
 
-### 跑驗收案例(CLI)
+### 跑測試案例
 
 ```bash
-python -m cart.cli tests/fixtures/case_a.txt tests/fixtures/case_b.txt
-# 需在 src 在路徑上的環境執行,例如 PYTHONPATH=src,或從安裝了此套件的 venv 執行
+curl -X POST http://localhost:3000/api/calculate \
+  -H "Content-Type: application/json" \
+  -d @tests/fixtures/case-1.json
 ```
 
-輸出每個案例一行的結算金額,case_a 為 `3083.60`、case_b 為 `43.54`。
+`tests/fixtures/case-1.json` 為基準案例(原 Case A),預期 `total` 為 `3083.60`;`case-2.json` 為 Case B,預期 `43.54`;`case-3` ~ `case-8` 為邊界情境,見 [docs/requirements.md](docs/requirements.md)。
 
 ## 四、目錄結構與分層
 
 ```
 shopping_cart/
-├── docs/              # 文件(requirements / feature-checklist / test-checklist / architecture / decisions / acceptance-report)
-├── data/              # 資料檔(seed.json;runtime.json 執行時產生,已 gitignore)
+├── docs/              # 文件(requirements / feature-checklist / test-checklist / architecture / decisions)
 ├── src/cart/
-│   ├── main.py        # FastAPI 進入點
-│   ├── config.py      # 路徑設定(以檔案位置推算,不依賴工作目錄)
-│   ├── domain/        # 領域層:目錄、模型、錯誤
-│   ├── services/      # 服務層:結算流程
-│   ├── repository/    # 檔案讀寫(唯一碰檔案的地方)
-│   ├── api/           # API 層:schema、router(極薄)
-│   ├── cli/           # 命令列工具與文字解析
-│   └── web/           # 前端靜態檔
-└── tests/             # unit / api / acceptance / fixtures
+│   ├── main.py                  # FastAPI 進入點
+│   ├── domain/                  # 領域層:模型、錯誤
+│   ├── services/                # 服務層:日期解析、計算引擎
+│   └── api/                     # API 層:schema、calculate router(極薄)
+└── tests/             # unit / api / fixtures
 ```
 
 **依賴方向:`api → services → domain`;`domain` 不得 import FastAPI 或任何 web 模組。**
 
 - `domain/`:領域資料與業務規則,不讀寫檔案、不認識外層。
-- `services/`:業務流程(結算),組合 domain 規則,不讀寫檔案。
-- `repository/`:唯一讀寫檔案的地方。
+- `services/`:業務流程(計算),組合 domain 規則,不讀寫檔案。
 - `api/`:HTTP 介面,只做「接收 → 呼叫 service → 回傳」。
-- `cli/parser.py`:文字解析,只做「字串 → 資料物件」,**不計算金額**。
+
+整個系統**無狀態**:沒有資料庫、沒有持久層、沒有前端,促銷與折價券都是每次請求的輸入而非常駐資料。
 
 ## 五、程式風格規則(全專案適用)
 
@@ -142,25 +136,16 @@ shopping_cart/
 ### 解耦,利於單元測試
 
 - 業務規則寫成**純函式**:相同輸入必得相同輸出,不讀檔、不讀系統時間、不用全域狀態
-- **日期由參數傳入**:任何函式不得自行呼叫 `date.today()`,「今天」由最外層決定後往內傳
+- **日期由參數傳入**:任何函式不得自行呼叫 `date.today()`,「交易日」由請求帶進來
 - I/O 與規則分離:`domain/`、`services/` 不讀寫檔案
-- 需要儲存或日期的類別,在建構時從外部傳入
 - PEP 8,所有函式標註參數與回傳型別
 - 不提前建立用不到的 base class、interface、factory
 
-### 前端
-
-- 拆成小函式(取資料、組畫面、顯示錯誤各一個),使用 `async / await`,不用 `.then()` 串接長邏輯
-- 插入資料時用 `textContent` 或建立元素,**不把資料直接拼進 `innerHTML`**
-- 載入中 / 成功 / 失敗三種狀態都要處理
-
 ## 六、現況摘要
 
-題目核心「依促銷與優惠券算出結算金額」**已完整實作並通過驗收案例**(case_a `3083.60`、case_b `43.54`,`pytest` 85 passed)。
+題目核心「依促銷與折價券算出結算金額」**已完整實作**,形態為一支無狀態計算 API:`POST /api/calculate`。基準案例 case-1(原 Case A) `total` 為 `3083.60`、case-2(原 Case B)為 `43.54`,`pytest` 53 passed,並以 curl 逐案例實測 8 組 JSON 全數吻合。
 
-尚未實作的部分集中在**後台管理**與**購物車持久化**,兩者都是題目未要求的加值範圍。完整清單(8 項,含各項現況與為何未做)與建議順序見 [docs/feature-checklist.md](docs/feature-checklist.md)。
-
-購物車目前只存在前端 JS 記憶體,重整頁面即清空;**金額的唯一信任來源是後端**,結算時後端只收商品名 + 數量,價格重取 `CATALOG`(見 [docs/decisions.md](docs/decisions.md) D4)。
+規格要點(完整版見 [docs/requirements.md](docs/requirements.md)):促銷有乘法 `rate` 與加法 `effect`、可限 `date`/`category`;折價券可多張依序套用,欄位為 `minSpend` / `expiryDate` / `discount` / `effect`;**價格由請求 JSON 帶入**,不查目錄(見 [docs/decisions.md](docs/decisions.md) D6)。
 
 ## 七、Git 工作流
 

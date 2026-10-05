@@ -1,0 +1,15 @@
+{
+  "date": "2015-11-11",
+  "items": [
+    {"name": "ipad", "category": "電子", "qty": 1, "unitPrice": "2399.00"},
+    {"name": "顯示器", "category": "電子", "qty": 1, "unitPrice": "1799.00"},
+    {"name": "啤酒", "category": "酒類", "qty": 12, "unitPrice": "25.00"},
+    {"name": "麵包", "category": "食品", "qty": 5, "unitPrice": "9.00"}
+  ],
+  "promotions": [
+    {"date": "2015-11-11", "category": "電子", "rate": "0.7"}
+  ],
+  "coupons": [
+    {"expiryDate": "2016-03-02", "minSpend": "1000", "discount": "200"}
+  ]
+}

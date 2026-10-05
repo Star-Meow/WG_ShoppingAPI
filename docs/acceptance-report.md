@@ -1,7 +1,7 @@
 # 結算系統驗收報告
 
-**範圍**:題目核心「給定購物車與促銷資訊,算出結算金額」——P0 結算引擎與 CLI 介面,以及其後加入的結算 API 與獨立結帳頁。
-**驗收日期**:2026-10-05(初版);2026-10-06 更新(優惠券改為可點選清單,新增券可選狀態 API)
+**範圍**:題目核心「給定購物車、促銷與折價券,算出最終結算金額」——一支無狀態計算 API `POST /api/calculate`。
+**驗收日期**:2026-10-06
 **測試環境**:Python 3.10.11、pytest 9.1.1、Windows + Git Bash,虛擬環境 `.venv`
 
 ---
@@ -10,42 +10,87 @@
 
 | 項目 | 結果 |
 | --- | --- |
-| `pytest` 全套測試 | **85 passed**(0 failed) |
-| Case A(`tests/fixtures/case_a.txt`) | **3083.60** ✅ 與題目預期一致 |
-| Case B(`tests/fixtures/case_b.txt`) | **43.54** ✅ 與題目預期一致 |
-| CLI 介面 `python -m cart.cli` | 兩案各印出一行金額,exit code 0 |
-| 結算 API `POST /api/checkout` | ✅ 回傳逐項金額明細,金額由後端計算 |
-| 券可選狀態 API `POST /api/checkout/coupon-options` | ✅ 依購物車回傳每張券可使用/已過期/未達門檻 |
-| 獨立結帳頁(瀏覽器實測) | ✅ 可用券可點選、選中即時重算、不可用券標灰附原因、結帳清空購物車 |
+| `pytest` 全套測試 | **53 passed**(0 failed) |
+| 8 組案例 `curl` 實測 | **8/8 吻合**(subtotal / total / couponResults 三欄全對) |
+| 基準案例 case-1(原 Case A) | total **3083.60** ✅ 與題目預期一致 |
+| case-2(原 Case B) | total **43.54** ✅ 與題目預期一致 |
+| 精度分辨案例 case-8 | subtotal **0.425**、total **0.33** ✅ float 算小計會得 0.42500000000000004,`round(0.425,2)` 更給 0.42 |
+| 錯誤處理 | 日期格式錯 → 400;`qty ≤ 0` / 空車 → 422 |
 
-題目指定的文字驗收案例已可透過 CLI 實際跑出預期金額;網頁端也已有完整的結帳頁,金額全部由後端 `Decimal` 計算後回傳,前端只負責顯示。
+題目指定的驗收路徑已由「文字案例 + CLI」改為「JSON + API」(見 [decisions.md](decisions.md) D6),`curl` 打 API 即是驗收,不再經過解析器或 CLI 中介層。
 
 ---
 
-## 二、Case A / Case B 計算過程(引擎實際行為)
+## 二、8 組案例實測結果
 
-### Case A:電子品類 0.7 折促銷 + 門檻 1000 折 200 的優惠券
+啟動方式:`uvicorn cart.main:app --port 3000 --app-dir src`,再對每組 fixture 發:
 
-| 明細 | 品類 | 原價小計 | 促銷後 |
+```bash
+curl -X POST http://localhost:3000/api/calculate \
+  -H "Content-Type: application/json" \
+  -d @tests/fixtures/case-N.json
+```
+
+| # | 情境 | 預期 subtotal | 實際 subtotal | 預期 total | 實際 total | couponResults | 結果 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 基準案例(原 Case A) | `3283.600` | `3283.600` | `3083.60` | `3083.60` | `[{0,true,null}]` | ✅ |
+| 2 | 券未達 minSpend(原 Case B) | `43.54` | `43.54` | `43.54` | `43.54` | `[{0,false,"below_min_spend"}]` | ✅ |
+| 3 | 券已過期 | `5999.00` | `5999.00` | `5999.00` | `5999.00` | `[{0,false,"expired"}]` | ✅ |
+| 4 | 促銷品類不匹配 | `698.00` | `698.00` | `698.00` | `698.00` | `[]` | ✅ |
+| 5 | 促銷日期不匹配 | `698.00` | `698.00` | `698.00` | `698.00` | `[]` | ✅ |
+| 6 | 多張折價券疊加 | `4899.300` | `4899.300` | `4199.30` | `4199.30` | `[{0,true,null},{1,true,null}]` | ✅ |
+| 7 | effect 為正數(服務費) | `100.00` | `100.00` | `100.00` | `100.00` | `[]` | ✅ |
+| 8 | 浮點精度 + 四捨五入 | `0.425` | `0.425` | `0.33` | `0.33` | `[{0,true,null}]` | ✅ |
+
+完整回應(case-1 為例):
+
+```json
+{"subtotal":"3283.600","total":"3083.60","couponResults":[{"index":0,"applied":true,"reason":null}]}
+```
+
+### 計算過程
+
+**case-1(基準案例)**——電子品類 0.7 折 + 門檻 1000 折 200:
+
+| 明細 | 品類 | 原價 | 促銷後 |
 | --- | --- | --- | --- |
-| ipad × 1 | 電子 | 2399.00 | 2399.00 × 0.7 = 1679.30 |
-| 顯示器 × 1 | 電子 | 1799.00 | 1799.00 × 0.7 = 1259.30 |
+| ipad × 1 | 電子 | 2399.00 | 2399.00 × 0.7 = 1679.300 |
+| 顯示器 × 1 | 電子 | 1799.00 | 1799.00 × 0.7 = 1259.300 |
 | 啤酒 × 12 | 酒類 | 300.00 | 300.00(無促銷) |
 | 麵包 × 5 | 食品 | 45.00 | 45.00(無促銷) |
 
-1. 促銷只套用電子品類(規則 1):電子合計 4198.00 × 0.7 = 2938.60
-2. 促銷後金額 = 2938.60 + 300.00 + 45.00 = **3283.60**
-3. 優惠券門檻以促銷後金額判斷(規則 3):3283.60 ≥ 1000,成立
-4. 3283.60 − 200 = **3083.60**(四捨五入到小數 2 位,規則 5)
+subtotal = 1679.300 + 1259.300 + 300.00 + 45.00 = **3283.600**(不四捨五入)
+3283.600 ≥ 門檻 1000 且未過期 → 3283.600 − 200 = **3083.60**
 
-### Case B:無促銷、無優惠券
+**case-2**——蔬菜 3 × 5.98 = 17.94、餐巾紙 8 × 3.20 = 25.60,subtotal = **43.54** < 門檻 1000 → 券不生效,total = **43.54**。
 
-- 蔬菜 3 × 5.98 = 17.94、餐巾紙 8 × 3.20 = 25.60
-- 無促銷套用、無優惠券:17.94 + 25.60 = **43.54**
+**case-3**——iphone 5999.00,交易日 2016-04-01 > 到期日 2016-03-02 → `expired`,total = **5999.00**。
+
+**case-4 / case-5**——鍵盤 2 × 349.00 = 698.00。case-4 促銷打在「日用品」但品項是「電子」(品類不符);case-5 促銷日期 2015-12-25 ≠ 交易日 2015-11-11(日期不符)。兩者促銷都不生效,total 皆 **698.00**。
+
+**case-6(多張券疊加)**——筆電 6999.00 × 0.7 = **4899.300**;兩張券皆達門檻且未過期,依序折 500 + 200 → 4899.300 − 700 = **4199.30**。
+
+**case-7**——咖啡杯 2 × 25.00 = 50.00,促銷未指定 date / category(全適用)且帶 `effect: 50` → 50.00 + 50 = **100.00**。
+
+**case-8(精度分辨案例)**——餅乾 3 × 0.10 = 0.30、蛋糕 1 × 0.125 = 0.125,subtotal = **0.425**(達門檻 0.40);0.425 − 0.10 = 0.325,`ROUND_HALF_UP` 到 2 位 = **0.33**。
+分辨點在 subtotal 本身:float 算 `0.1 × 3 + 0.125` 得 `0.42500000000000004` 而非精確 0.425,且 `0.425` 的 double 表示略小於真值,使 `round(0.425, 2)` 得 **0.42** 而非 Decimal 的 **0.43**;全程 `Decimal` 才能保證小計與四捨五入都貼合十進位真值。
 
 ---
 
-## 三、各功能實作方式與效果
+## 三、錯誤處理實測
+
+| 輸入 | 狀態碼 | 結果 |
+| --- | --- | --- |
+| `date` = `"2015/13/45"`(不合法日期) | **400** | `{"detail":"無效的日期格式: 2015/13/45"}`(領域錯誤) |
+| `qty` = 0 | **422** | Pydantic 驗證 `Input should be greater than 0` |
+| `items` = `[]` | **422** | Pydantic 驗證 `List should have at least 1 item` |
+| `date` = `"2015.11.11"` / `"2015/11/11"` | **200** | 三種分隔格式皆接受 |
+
+400 與 422 的分工依規格:日期格式與金額數值屬領域錯誤(400),結構性驗證交給 Pydantic(422)。
+
+---
+
+## 四、各功能實作方式
 
 ### 1. 領域模型 `src/cart/domain/models.py`
 
@@ -53,175 +98,108 @@
 
 | 物件 | 內容 | 實作重點 |
 | --- | --- | --- |
-| `CartItem` | 品名、品類、單價、數量 | 品類由目錄查得,不由文字輸入決定 |
-| `Promotion` | 促銷日期、折扣、品類 | 折扣為 `Decimal`(0.7 = 打 7 折) |
-| `Coupon` | 到期日、門檻、折額 | 三者皆為外部傳入 |
-| `Cart` | 項目清單 | 唯一行為:`subtotal()` 算未折扣小計 |
-| `CheckoutInput` | 購物車、促銷清單、結算日、優惠券 | **「每次只能用一張優惠券」由型別 `coupon: Coupon \| None` 直接強制**,不是靠執行期檢查 |
+| `LineItem` | 品名、品類、數量、單價 | 品類為**自由字串**,不由固定目錄約束 |
+| `Promotion` | 日期、品類、rate、effect | `date` / `category` 可為 `None`,代表不設限 |
+| `Coupon` | 到期日、門檻、折額、effect | 四者皆可為 `None`;`discount` 為正數,套用時才轉負 |
+| `CaseInput` | 交易日、品項、促銷清單、折價券清單 | 折價券是**清單**,支援多張依序套用 |
+| `CalculationResult` / `CouponResult` | 計算結果 | `reason` 只有 `expired` / `below_min_spend` / `null` |
 
-金額一律 `Decimal`、日期一律 `datetime.date`,兩者皆由外部傳入,符合「日期由參數傳入、不自行呼叫 `date.today()`」的規範。
+金額一律 `Decimal`、日期一律 `datetime.date`,兩者皆由請求帶入,符合「日期由參數傳入、不自行呼叫 `date.today()`」的規範。
 
 ### 2. 領域錯誤 `src/cart/domain/errors.py`
 
-`CheckoutError` 為共同基底,API 層可對應 HTTP 狀態碼、CLI 層統一捕捉印出:
+`CalculationError` 為共同基底,`main.py` 統一攔截轉成 HTTP 400:
 
 | 錯誤 | 意義 | 觸發位置 |
 | --- | --- | --- |
-| `ParseError` | 案例文字格式不符(欄位缺失、段落數不對、多張券) | `cli/parser.py` |
-| `UnknownProductError` | 購物車出現目錄以外的商品 | `cli/parser.py` |
-| `PriceMismatchError` | 文字單價與目錄不一致(價格必須由目錄重取) | `cli/parser.py` |
-| `CouponNotApplicableError` | 券過期或未達門檻 | 供 API 層後續使用 |
+| `DateFormatError` | 日期格式不支援或不可能(如 2/30) | `services/date_parsing.py` |
+| `InvalidDecimalError` | 金額欄位不是數值 | `services/date_parsing.py` |
 
-### 3. 結算服務 `src/cart/services/checkout.py`
+### 3. 日期解析 `src/cart/services/date_parsing.py`
+
+`parse_date` 接受 `YYYY-MM-DD` / `YYYY.MM.DD` / `YYYY/MM/DD` 三種分隔格式,其他格式或不可能日期(2/13、2/30)拋 `DateFormatError`;`parse_decimal` 把字串轉 `Decimal` 並拒絕非數值。兩者皆為純函式,不讀系統時間。
+
+### 4. 計算引擎 `src/cart/services/calculator.py`
 
 全部是**純函式**,相同輸入必得相同輸出,不讀檔、不讀系統時間。函式命名為「動詞 + 受詞」,上層只依序呼叫下層:
 
 ```
-calculate_checkout(input)                      ← 唯一對外入口
- ├─ calculate_promoted_subtotal(cart, promos, date)
- │    └─ calculate_promoted_item_subtotal(item, promos, date)
- │         ├─ calculate_item_subtotal(item)
- │         └─ find_active_promotion(promos, category, date)
- │                └─ is_promotion_active(promo, date)
- ├─ calculate_coupon_discount(coupon, promoted_subtotal, date)
- │    └─ is_coupon_applicable(coupon, promoted_subtotal, date)
- │         ├─ is_coupon_expired(coupon, date)
- │         └─ is_coupon_threshold_met(coupon, amount)
- └─ round_to_two_places(promoted_subtotal - coupon_discount)
+calculate(input)                                   ← 唯一對外入口
+ ├─ calculate_subtotal(items, promos, date)
+ │    └─ calculate_line_total(item, promos, date)
+ │         ├─ collect_applicable_promotions(promos, category, date)
+ │         │    └─ is_promotion_applicable(promo, category, date)
+ │         ├─ calculate_rate_product(applicable)      ← Π(rate)
+ │         └─ calculate_effect_sum(applicable)        ← Σ(effect)
+ ├─ apply_coupons(coupons, subtotal, date)
+ │    └─ apply_coupon(coupon, index, subtotal, date)
+ │         ├─ is_coupon_expired(coupon, date)         ← 過期優先
+ │         └─ is_coupon_below_min_spend(coupon, subtotal)
+ │    └─ resolve_coupon_effect(coupon)                ← effect > -discount > 0
+ └─ round_to_two_places(subtotal + coupon_effect_sum)
 ```
 
-對應的業務規則:
+對應的業務規則(規則編號見 [requirements.md](requirements.md)):
 
-1. **促銷折扣**:`is_promotion_active` 只有「結算日 == 促銷日期」才生效;`find_active_promotion` 再比對品類,只套用在對應品類。
-2. **優惠券有效期**:`is_coupon_expired` 採「結算日 > 到期日才算過期」,到期日當天仍有效。
-3. **優惠券門檻**:`calculate_promoted_subtotal` 先算出促銷後金額,`is_coupon_threshold_met` 才以此金額判斷(含門檻值本身)。
-4. **單張限制**:由 `CheckoutInput` 型別強制,解析器遇到兩張券時拋 `ParseError`。
-5. **金額**:`round_to_two_places` 用 `ROUND_HALF_UP` 四捨五入到小數 2 位(測試驗證 `100.005 → 100.01`、`100.004 → 100.00`)。
+1. **促銷生效**(規則 1):`is_promotion_applicable` 要求「日期未指定或相符」且「品類未指定或相符」。
+2. **促銷計算**(規則 2):`lineTotal = qty × unitPrice × Π(rate) + Σ(effect)`,多張生效促銷的 rate 是**連乘**。
+3. **券過期**(規則 3):交易日 **>** 到期日才算過期,到期日當天有效。
+4. **券門檻**(規則 4):小計 **<** minSpend 才不生效,含等號;門檻一律跟**未四捨五入的 subtotal** 比。
+5. **過期優先於門檻**(規則 5):`apply_coupon` 先判過期,兩者皆成立時 reason 為 `expired`。
+6. **券取值**(規則 6):`effect` > `-discount` > `0`。
+7. **四捨五入**(規則 8):只在最後 `total` 做,`ROUND_HALF_UP` 到小數 2 位;`subtotal` 忠實呈現計算過程(如 `3283.600`、`4899.300`)。
 
-### 4. 案例文字解析 `src/cart/cli/parser.py`
+### 5. 計算 API `src/cart/api/calculate.py`、`api/schemas.py`
 
-只做「字串 → 資料物件」,不算金額。`parse_case_text()` 把整份文字切成三個段落(促銷 / 購物車 / 結算日與優惠券),再逐行交給 `parse_promotion_line`、`parse_cart_line`、`parse_coupon_line`、`parse_date`。
+維持「接收 → 呼叫 service → 回傳」的薄度:
 
-**價格信任來源(D4)**:明細行的品類與單價一律由 `CATALOG` 經 `find_product_by_name()` 查得;案例文字所載的單價只做一致性檢查,不一致時拋 `PriceMismatchError`。這讓「攻擊者改掉輸入文字的單價就能低價結帳」的路徑被擋住。
+- `POST /api/calculate`:收 `{date, items, promotions, coupons}`,回 `{subtotal, total, couponResults}`。
+- schema 層用 Pydantic,欄名直接用 JSON 的 camelCase(`unitPrice` / `expiryDate` / `minSpend`),金額一律字串、`qty` 限定正整數、`items` 不得為空。
+- `build_case_input()` 組裝領域物件,促銷與折價券的空欄位保留 `None`;計算全部在 `calculator.py`,API 層不放任何業務判斷。
 
-格式錯誤都會明確報出,而非靜默吞掉:日期格式不對、品類不存在、數量非正整數、商品不在目錄、段落數不足、!物車為空、多張優惠券等。
+### 6. 應用進入點 `src/cart/main.py`
 
-### 5. CLI 入口 `src/cart/cli/__main__.py`
-
-```bash
-PYTHONPATH=src python -m cart.cli tests/fixtures/case_a.txt tests/fixtures/case_b.txt
-```
-
-- 每個案例檔印出一行金額(case_a → `3083.60`、case_b → `43.54`)
-- 無參數時印用法、exit code 2
-- 讀檔失敗或解析/結算錯誤印到 stderr、exit code 1;其餘案例仍會繼續處理
-- 本模組是外層介面(與 `main.py` 同層),只負責讀檔與印出,解析與計算都在可單測的模組內
-
-### 6. 結算 API `src/cart/api/checkout.py`、`src/cart/repository/json_store.py`
-
-兩個 endpoint,都保持「接收 → 呼叫 service → 回傳」的薄度:
-
-- `GET /api/coupons`:從 `data/seed.json` 讀出可選優惠券,回傳 id / 名稱 / 門檻 / 折額 / 到期日(皆字串)。
-- `POST /api/checkout`:收 `{items:[{name, quantity}], coupon_id?}`,回傳逐項明細——原價合計、促銷後金額、券折抵、結算金額、券狀態、實際套用的促銷與券名稱。
-
-**價格由後端重取(D4)**:`build_cart()` 只拿前端傳來的商品名,單價與品類一律由 `CATALOG` 經 `find_product_by_name()` 查得;前端傳的價格完全不使用。未知商品回 400。
-
-**「當前日期」由最外層決定(規則 6)**:`resolve_current_date()` 先讀 `data/runtime.json` 的覆寫值,沒有才用 `date.today()`;service 層不碰系統時間。把日期覆寫成促銷日期,該促銷就會在結算時自動生效(下面第五節實測)。
-
-**券三狀態**:`usable` / `expired` / `below_threshold`,由 `checkout_coupon_status()` 依「促銷後金額 vs 門檻」與「結算日 vs 到期日」判斷;不可用時折抵 0 且不視為已套用,但仍把原因告訴前端。
-
-### 7. 獨立結帳頁 `src/cart/web/index.html`
-
-點懸浮購物車鈕後**整頁切換**到結帳頁(不是彈出面板),版面是左明細 / 右結帳欄:
-
-- **左側**:逐項顯示品名、單價 × 數量、該項小計;空車顯示「購物車是空的,請先回到目錄挑選商品」並停用結帳鈕。
-- **右側結帳欄**:**可點選的優惠券清單**(「不使用優惠券」+ `POST /api/checkout/coupon-options` 回傳的每張券)、金額明細(原價合計 / 各促銷折抵 / 券折抵 / 結算金額)、確認結帳鈕。
-- **只有能用的券可以點**:狀態由後端依「促銷後金額 vs 門檻」與「結算日 vs 到期日」判斷,可使用的券可點選(選中後高亮並即時重算),不可用的券停用、標灰,並直接在卡片上寫明原因(「已過期,本次結算無法使用」或「未達門檻:需促銷後金額滿 N 元」),不必點了才知道。
-- 確認結帳後顯示「結帳完成,結算金額 X 元」、清空購物車、角標歸 0。
-- 三種狀態都處理:計算中、成功、失敗(附錯誤與排除方式);資料一律用 `textContent` / 建立元素插入,不拼 `innerHTML`;760px 以下結帳欄改為直排。
+只註冊 `/api/calculate` 一個 router,並註冊 `CalculationError` 的例外處理器轉成 400。無狀態:不存資料、不讀檔、不碰系統時間。
 
 ---
 
-## 四、自動化測試清單
+## 五、自動化測試
 
-共 85 項測試,全數通過:
+共 53 項測試,全數通過(明細見 [test-checklist.md](test-checklist.md)):
 
 | 測試檔 | 項數 | 涵蓋內容 |
 | --- | --- | --- |
-| `tests/unit/test_checkout.py` | 22 | 促銷生效/不生效/跨品類、券過期/到期日當天/門檻上下緣、門檻以促銷後金額判斷、四捨五入、Case A/B 完整結算 |
-| `tests/unit/test_checkout_result.py` | 7 | `build_checkout_result`:原價/促銷後/券折抵明細、券三狀態、已套用促銷與券 |
-| `tests/unit/test_coupon_options.py` | 7 | `collect_coupon_options`:可使用/已過期/未達門檻、門檻以促銷後金額判斷、多券混合狀態、保留券參考、空清單 |
-| `tests/unit/test_parser.py` | 18 | 日期/促銷/明細/優惠券解析、未知商品、單價不一致、數量為 0、缺結算日、空車、多張券 |
-| `tests/unit/test_cli.py` | 5 | 子程序執行 CLI:印金額、多檔、用法、缺檔、格式錯誤 |
-| `tests/acceptance/test_cases.py` | 2 | 讀真實 fixture 檔 → 解析 → 結算 → 比對 3083.60 / 43.54 |
-| `tests/api/test_checkout_api.py` | 12 | `GET /api/coupons`;`POST /api/checkout` 全情境;`POST /api/checkout/coupon-options` 的狀態判斷與 400 錯誤 |
-| `tests/unit/test_catalog.py` | 4 | 目錄 4 品類 18 項、價格皆 `Decimal` |
-| `tests/unit/test_products_builder.py` | 4 | `build_category_groups()` 輸出格式 |
-| `tests/api/test_products_api.py` | 4 | `GET /api/products`、`GET /` 經 `TestClient` |
+| `tests/unit/test_date_parsing.py` | 8 | 三種日期格式、錯誤格式與不可能日期、Decimal 精確值 |
+| `tests/unit/test_calculator.py` | 13 | rate 套用 / 連乘、effect 加減、品類與日期不匹配、小計不四捨五入、Case A 端到端、精度案例 |
+| `tests/unit/test_coupon.py` | 14 | discount 轉負、effect 優先、到期日當天有效、門檻含等號、過期優先於門檻、多券依序套用 |
+| `tests/api/test_calculate_api.py` | 18 | 逐一讀 8 組 fixture 打 API 比對完整回應;三日期格式;400 / 422 錯誤 |
 
 其中直接驗證題目規則的關鍵測試:
 
-- `test_coupon_threshold_is_judged_after_promotion_discount`:原價過門檻但促銷後未過時,券不得折抵(規則 3 的回歸保護)
-- `test_checkout_rounds_half_up_to_two_places`:`9.995 × 3 = 29.985 → 29.99`
-- `test_promotion_is_active_only_on_its_date`:促銷前一天與後一天皆不生效
-
----
-
-## 五、結帳頁瀏覽器實測(2026-10-05)
-
-以 ZCode In-app Browser 打開 `http://127.0.0.1:8001/`,實際操作全流程:
-
-| 步驟 | 操作 | 實際結果 |
-| --- | --- | --- |
-| 1 | 載入目錄頁 | 18 項商品、4 品類分頁全部渲染;載入中狀態先出現後被取代 |
-| 2 | 加入 ipad×1、顯示器×1、啤酒×12、麵包×5,點懸浮鈕 | 結帳頁整頁切換;左側四項明細正確,右側原價合計 **4543.00**,角標 19 |
-| 3 | 優惠券選「滿三千折五百」 | 明細出現「優惠券:滿三千折五百 −500.00」,結算金額 **4043.00** |
-| 4 | 改選過期券「端午滿千折五十」 | 出現警示「優惠券已過期,本次結算未折抵」,折抵消失,金額退回 4543.00 |
-| 5 | 改回「不使用優惠券」 | 結算金額 **4543.00**,無折抵項 |
-| 6 | 把當前日期覆寫到 2026-11-11(`runtime.json`),再選「滿千折百」 | **促銷自動生效**:「促銷:雙 11 電子品類 7 折 −1259.40」+「優惠券:滿千折百 −100.00」,結算金額 **3183.60** |
-| 7 | 點「確認結帳」 | 顯示「結帳完成,結算金額 3183.60 元」、購物車清空、角標歸 0、結帳鈕停用 |
-
-步驟 6 證實了需求描述的行為:**預先寫好的促銷(聖誕節、雙 11)在「當前日期」被調到促銷日期時自動生效**,不需要重啟或改程式碼,因為促銷是否生效本來就只看「結算日 == 促銷日期」。
-
-步驟 6 的算式對拍:電子品類原價 (2399.00 + 1799.00) × 0.7 = 2938.60,其他品類 300.00 + 45.00 = 345.00,促銷後 3283.60,折 100 → **3183.60** ✅
-
-## 五之一、可點選優惠券清單實測(2026-10-06)
-
-優惠券從下拉改成可點選清單後,以 ZCode In-app Browser 打開 `http://127.0.0.1:8000/` 重新實測:
-
-| 步驟 | 操作 | 實際結果 |
-| --- | --- | --- |
-| 1 | 加入 ipad×1、顯示器×1、啤酒×1、麵包×1,點懸浮鈕 | 結帳頁列出 5 張卡片:「不使用」+ 4 張券;「滿百折十」「滿千折百」「滿三千折五百」標「可使用」可點,「端午滿千折五十(已過期)」**停用並標灰**,直接寫明「已過期,本次結算無法使用」 |
-| 2 | 點「滿千折百」 | 該卡高亮(`aria-pressed` 正確切換),明細出現「優惠券:滿千折百 −100.00」,結算金額 **4132.00**(原價 4232.00 − 100) |
-| 3 | 把當前日期覆寫到 2026-11-11 後重進結帳頁 | **促銷自動生效**:「促銷:雙 11 電子品類 7 折 −1259.40」;「滿三千折五百」當場**由可使用轉為停用**,原因「未達門檻:需促銷後金額滿 3000 元」(促銷後 2972.60 < 3000),全程不必點錯才知道 |
-| 4 | 點「確認結帳」 | 顯示「結帳完成,結算金額 2872.60 元」、購物車清空、券清單縮回只剩「不使用優惠券」、結帳鈕停用 |
-
-步驟 3 是這次改動的核心價值:**券能不能用,在點之前就由後端算好並直接呈現在卡片上**,「門檻以促銷後金額判斷」(規則 3)的效力也即時反映在清單上,而不是選了才跳警示。
+- `test_calculator_precision_avoids_float_error`:`0.1×3 + 0.125 = 0.425` 精確無誤;float 會算成 `0.42500000000000004`,`round(0.425, 2)` 更因 double 表示偏小而給 **0.42**
+- `test_apply_coupon_marks_expired_before_threshold`:同時過期且未達門檻時,reason 必須是 `expired`
+- `test_line_total_multiplies_multiple_matching_rates`:兩張生效促銷的 rate 是連乘(`0.7 × 0.8`),不是相加
+- `test_calculate_case_a_end_to_end`:基準案例的 `3083.60`,任何一條規則走偏都會變號
 
 ---
 
 ## 六、關於 DB 的評估
 
-未導入資料庫,理由記錄於 [docs/decisions.md](decisions.md) D1:
+未導入資料庫,理由記錄於 [decisions.md](decisions.md) D1 / D6:
 
-- 題目把促銷與優惠券當成**每次結算一起傳進來的輸入參數**(如 `case_a.txt` 中的 `2015.11.11|0.7|電子`),而非被系統查詢的常駐實體。系統從不問「某日期當時生效的是哪幾檔促銷」,版本回溯與查詢能力在 MVP 裡不會被用到。
+- 題目把促銷與折價券當成**每次請求一起傳進來的輸入參數**,而非被系統查詢的常駐實體;系統無狀態,從不問「某日期當時生效的是哪幾檔促銷」。
 - 依賴白名單只有 `fastapi`、`uvicorn`、`pytest`、`httpx`;為幾個欄位付出 schema 定義與測試隔離的成本屬過度設計。
-- 換 DB 的成本接近零:`repository/` 是唯一讀寫檔案的地方,`domain` 與 `services` 不碰檔案,將來換成 `db_store.py` 時領域層與服務層一行都不用改。
-
-**翻轉條件**(滿足任一項即導入):後台需要對促銷/優惠券做 CRUD、需要回溯某日期當時的促銷、多人並發寫入、審計軌跡、跨表查詢或報表。
+- 現在連持久層都移除了(D6):`domain` 與 `services` 是純函式、不碰檔案,將來需要持久化時,接點在 API 層的組裝方式,計算引擎一行都不用改。
 
 ---
 
-## 七、尚未實作與已知限制
+## 七、已知限制
 
 | 項目 | 狀態 | 說明 |
 | --- | --- | --- |
-| 後台發放優惠券 / 促銷管理 | **暫緩** | 評估過「券原因、名稱、圖片、折扣效果 + 日期驅動促銷」這組需求;它會翻轉 D1(促銷與券從輸入參數變成常駐實體),並逼出「同日促銷重疊」「全館促銷」「多券擇優」三個待定案的业务決策。决定先做結帳頁,此功能待定案後再動 |
-| 多張券的擇優策略 | **待決定** | 題目說「每次只能用一張」但未定義多張可用時如何選。目前結帳頁把可用的券全部列出由使用者點選(即「由使用者選擇」路線);若要改「自動套用減額最大者」需在 service 加一個擇優函式 |
-| 「當前日期」後台 API | 讀寫機制已備妥 | `repository/json_store.py` 已能讀寫 `runtime.json` 覆寫值(第五節步驟 6 實測生效),但 `api/admin.py` 的 endpoint 尚未開,目前只能改檔案 |
-| 後端購物車 API | 未實作 | 購物車仍只存前端 JS 記憶體,重整頁面即清空;日後接 D3 的 session 方案 |
-| 前端購物車編輯頁 | 未實作 | 結帳頁目前只能瀏覽明細,不能修改 / 刪除品項 |
-| 前端頁面視覺驗收 | 部分受限 | 結帳頁以瀏覽器實測驗證了互動與金額(第五節);但本環境無法輸入圖像,版面與配色的視覺檢查只能靠 DOM 結構與文字內容,無法做像素級比對,留待可輸入圖像的環境補上 |
+| 無前端 | 不做(範圍外) | 題目核心是結算計算;前端屬追加項,本規格不涵蓋 |
+| 多張券的門檻判斷基準 | 依規格定案 | 每張券都對**同一個原始 subtotal** 判斷,而非逐張重算;若改規格需先補測試再改 |
+| 無持久層、無登入 | 不做(範圍外) | 見 D1 / D3 / D6;系統無狀態,每次請求獨立 |
 
 ---
 
@@ -237,14 +215,12 @@ python -m venv .venv
 pip install -r requirements-dev.txt
 
 # 3. 跑全套測試
-pytest                              # 預期 85 passed
+pytest                              # 預期 53 passed
 
-# 4. 跑題目驗收案例
-PYTHONPATH=src python -m cart.cli tests/fixtures/case_a.txt tests/fixtures/case_b.txt
-# 預期輸出:
-# 3083.60
-# 43.54
-
-# 5. 啟動伺服器,用瀏覽器開 http://127.0.0.1:8000/ 使用結帳頁
-uvicorn cart.main:app --reload --app-dir src
+# 4. 啟動伺服器,跑 8 組驗收案例
+uvicorn cart.main:app --port 3000 --app-dir src
+curl -X POST http://localhost:3000/api/calculate \
+  -H "Content-Type: application/json" \
+  -d @tests/fixtures/case-1.json
+# 預期輸出:{"subtotal":"3283.600","total":"3083.60","couponResults":[{"index":0,"applied":true,"reason":null}]}
 ```

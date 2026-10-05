@@ -1,0 +1,10 @@
+{
+  "date": "2015-11-11",
+  "items": [
+    {"name": "咖啡杯", "category": "日用品", "qty": 2, "unitPrice": "25.00"}
+  ],
+  "promotions": [
+    {"effect": "50"}
+  ],
+  "coupons": []
+}

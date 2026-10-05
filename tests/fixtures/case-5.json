@@ -1,0 +1,10 @@
+{
+  "date": "2015-11-11",
+  "items": [
+    {"name": "鍵盤", "category": "電子", "qty": 2, "unitPrice": "349.00"}
+  ],
+  "promotions": [
+    {"date": "2015-12-25", "category": "電子", "rate": "0.7"}
+  ],
+  "coupons": []
+}

@@ -1,95 +1,83 @@
-"""結算領域模型:購物車、購物車項目、促銷與優惠券的資料物件。
+"""結算領域模型:一次計算請求的資料物件。
 
-資料物件只負責存放資料,業務邏輯寫在 services/checkout.py。
-金額一律使用 Decimal,日期使用 datetime.date,兩者皆由外部傳入。
+資料物件只負責存放資料,業務邏輯寫在 services/calculator.py。
+金額一律使用 Decimal、日期使用 datetime.date,兩者皆由外部傳入。
+品類為自由字串,不由目錄約束(規格允許任意品類,如「生活用品類」)。
 """
 
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from cart.domain.catalog import Category
-
 
 @dataclass(frozen=True)
-class CartItem:
-    """購物車內的單一商品項目。"""
+class LineItem:
+    """購物車內的單一商品項目,單價由請求 JSON 帶入。"""
 
     name: str
-    category: Category
-    unit_price: Decimal
+    category: str
     quantity: int
+    unit_price: Decimal
 
 
 @dataclass(frozen=True)
 class Promotion:
-    """促銷折扣:在促銷日期當天,對指定品類的商品打折。"""
+    """促銷:可對指定日期與品類的商品打折或加減金額。
 
-    date: date
-    discount: Decimal
-    category: Category
-    name: str = ""
+    rate 為乘法(如 0.7),effect 為加法(如 -50 或 +50),兩者可同時存在;
+    date 與 category 省略(None)代表不設限,對所有品項生效。
+    """
+
+    date: date | None
+    category: str | None
+    rate: Decimal | None
+    effect: Decimal | None
 
 
 @dataclass(frozen=True)
 class Coupon:
-    """優惠券:有效期內且金額達門檻時,折抵固定金額。
+    """折價券:有效期內且達到小計門檻時,折抵或加減固定金額。
 
-    id 與 name 是給前台與 API 使用的識別與顯示文字,不參與金額計算;
-    從測試案例文字解析出來的券沒有這兩個欄位(維持空字串)。
+    discount 為正數、套用時自動轉負;effect 直接指定加減值。
+    取值優先序為 effect > -discount > 0,三者皆可省略。
     """
 
-    expiry_date: date
-    threshold: Decimal
-    discount: Decimal
-    id: str = ""
-    name: str = ""
+    expiry_date: date | None
+    min_spend: Decimal | None
+    discount: Decimal | None
+    effect: Decimal | None
 
 
 @dataclass(frozen=True)
-class Cart:
-    """購物車:持有顧客選購的全部項目。"""
+class CaseInput:
+    """一次計算的完整輸入:交易日、購物車、促銷清單與折價券清單。"""
 
-    items: list[CartItem]
-
-    def subtotal(self) -> Decimal:
-        """購物車的未折扣小計。"""
-        total = Decimal("0")
-        for item in self.items:
-            total = total + item.unit_price * item.quantity
-        return total
-
-
-@dataclass(frozen=True)
-class CheckoutInput:
-    """一次結算的完整輸入:購物車、促銷清單、結算日與(最多一張)優惠券。"""
-
-    cart: Cart
+    date: date
+    items: list[LineItem]
     promotions: list[Promotion]
-    checkout_date: date
-    coupon: Coupon | None = None
+    coupons: list[Coupon]
 
 
 @dataclass(frozen=True)
-class CheckoutResult:
-    """結算明細:把計算過程的每一步金額都暴露出來,供前端逐項顯示。
+class CouponResult:
+    """單張折價券的套用結果,供呼叫端判斷是否生效與不生效原因。
 
-    優惠券折抵可能因過期或未達門檻而不成立,此時 discount 為 0、
-    coupon_status 說明原因;applied_coupon 記錄實際套用的券。
+    reason 只有兩種:expired(交易日超過到期日)、below_min_spend(小計未達門檻);
+    成功套用時為 None。
     """
 
-    original_subtotal: Decimal
-    promoted_subtotal: Decimal
-    coupon_discount: Decimal
-    total: Decimal
-    coupon_status: str
-    applied_coupon: Coupon | None
-    applied_promotions: list[Promotion]
+    index: int
+    applied: bool
+    reason: str | None
 
 
 @dataclass(frozen=True)
-class CouponOption:
-    """一張優惠券在特定結算條件下的可選狀態,供結帳頁列出可點選的券。"""
+class CalculationResult:
+    """計算結果:促銷後小計、最終金額與每張折價券的套用結果。
 
-    coupon: Coupon
-    status: str
+    subtotal 不四捨五入以忠實呈現計算過程,total 才四捨五入到小數 2 位。
+    """
+
+    subtotal: Decimal
+    total: Decimal
+    coupon_results: list[CouponResult]

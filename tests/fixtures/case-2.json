@@ -1,0 +1,11 @@
+{
+  "date": "2015-01-01",
+  "items": [
+    {"name": "蔬菜", "category": "食品", "qty": 3, "unitPrice": "5.98"},
+    {"name": "餐巾紙", "category": "日用品", "qty": 8, "unitPrice": "3.20"}
+  ],
+  "promotions": [],
+  "coupons": [
+    {"expiryDate": "2016-03-02", "minSpend": "1000", "discount": "200"}
+  ]
+}

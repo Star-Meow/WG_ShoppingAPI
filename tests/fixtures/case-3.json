@@ -1,0 +1,10 @@
+{
+  "date": "2016-04-01",
+  "items": [
+    {"name": "iphone", "category": "電子", "qty": 1, "unitPrice": "5999.00"}
+  ],
+  "promotions": [],
+  "coupons": [
+    {"expiryDate": "2016-03-02", "minSpend": "1000", "discount": "200"}
+  ]
+}
