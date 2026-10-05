@@ -6,11 +6,11 @@
 
 | 項目 | 數值 |
 | --- | --- |
-| 測試總數 | **74**(全數通過) |
-| 測試檔數 | 9 |
+| 測試總數 | **85**(全數通過) |
+| 測試檔數 | 10 |
 | 執行方式 | `pytest`(需在 `.venv` 內) |
-| 執行時間 | 約 3 秒 |
-| 測試分層 | unit(60)/ api(12)/ acceptance(2) |
+| 執行時間 | 約 1.2 秒 |
+| 測試分層 | unit(67)/ api(16)/ acceptance(2) |
 
 > HTTP 測試用 FastAPI 的 `TestClient`(依賴 `httpx`),不啟動真的伺服器。
 
@@ -26,13 +26,14 @@
 | `test_parser.py` | 18 | 日期/促銷/明細/優惠券解析;錯誤案例:未知商品、單價不一致、數量為 0、缺結算日、空車、多張券 | 需求四(案例格式)、規則 4 |
 | `test_products_builder.py` | 4 | `build_category_groups()` 的 4 組、18 項、價格字串、品類順序(不使用 `TestClient`) | — |
 | `test_cli.py` | 5 | 子程序執行 `python -m cart.cli`:印金額、多檔、用法提示、缺檔、格式錯誤 | — |
+| `test_coupon_options.py` | 7 | `collect_coupon_options`:可使用/已過期/未達門檻、門檻以促銷後金額判斷、多券混合狀態、保留券參考、空清單 | 規則 2、3 |
 
 ### API 測試 `tests/api/`
 
 | 檔案 | 項數 | 涵蓋內容 | 對應需求規則 |
 | --- | --- | --- | --- |
 | `test_products_api.py` | 4 | `GET /api/products` 與 `GET /` 經 `TestClient` | — |
-| `test_checkout_api.py` | 8 | `GET /api/coupons`;`POST /api/checkout`:無券原價、促銷日期生效、券折抵、過期券、未達門檻、未知商品 400、未知券 400;並驗證 `runtime.json` 日期覆寫會讓促銷自動生效 | 規則 1、3、6 |
+| `test_checkout_api.py` | 12 | `GET /api/coupons`;`POST /api/checkout`:無券原價、促銷日期生效、券折抵、過期券、未達門檻、未知商品 400、未知券 400;`POST /api/checkout/coupon-options`:可用與過期狀態、門檻以促銷後金額判斷、顯示欄位齊全、未知商品 400 | 規則 1、2、3、6 |
 
 ### 驗收測試 `tests/acceptance/`
 

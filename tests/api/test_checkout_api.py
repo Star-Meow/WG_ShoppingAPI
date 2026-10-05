@@ -116,3 +116,50 @@ def test_checkout_rejects_unknown_coupon_with_400(client: TestClient):
     )
     assert response.status_code == 400
     assert "NO_SUCH_COUPON" in response.json()["detail"]
+
+
+def test_coupon_options_mark_usable_and_expired(client: TestClient):
+    response = client.post(
+        "/api/checkout/coupon-options",
+        json={"items": [{"name": "ipad", "quantity": 1}]},
+    )
+    assert response.status_code == 200
+    statuses = {option["id"]: option["status"] for option in response.json()}
+    assert statuses["COUPON-1000-100"] == "usable"
+    assert statuses["COUPON-EXPIRED-50"] == "expired"
+
+
+def test_coupon_options_judge_threshold_by_promoted_amount(client: TestClient, system_date):
+    """門檻以促銷後金額判斷(規則 3):原價 4198 過 3000 門檻,促銷後 2938.60 未滿。"""
+    json_store.save_current_date(date(2026, 11, 11))
+    response = client.post(
+        "/api/checkout/coupon-options",
+        json={"items": [{"name": "ipad", "quantity": 1}, {"name": "顯示器", "quantity": 1}]},
+    )
+    assert response.status_code == 200
+    statuses = {option["id"]: option["status"] for option in response.json()}
+    assert statuses["COUPON-1000-100"] == "usable"
+    assert statuses["COUPON-3000-500"] == "below_threshold"
+
+
+def test_coupon_options_include_display_fields(client: TestClient):
+    response = client.post(
+        "/api/checkout/coupon-options",
+        json={"items": [{"name": "麵包", "quantity": 1}]},
+    )
+    assert response.status_code == 200
+    option = response.json()[0]
+    assert option["id"] == "COUPON-100-10"
+    assert option["name"] == "滿百折十"
+    assert option["threshold"] == "100"
+    assert option["discount"] == "10"
+    assert option["expiry_date"] == "2027-06-30"
+
+
+def test_coupon_options_rejects_unknown_product_with_400(client: TestClient):
+    response = client.post(
+        "/api/checkout/coupon-options",
+        json={"items": [{"name": "未知商品", "quantity": 1}]},
+    )
+    assert response.status_code == 400
+    assert "未知商品" in response.json()["detail"]

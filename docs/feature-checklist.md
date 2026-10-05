@@ -8,10 +8,10 @@
 
 | 類別 | 已完成 | 總項目 | 完成率 |
 | --- | --- | --- | --- |
-| 後端 | 19 | 22 | 86% |
+| 後端 | 20 | 22 | 91% |
 | 前端 | 15 | 17 | 88% |
-| 測試 | 10 | 10 | 100% |
-| **合計** | **44** | **49** | **90%** |
+| 測試 | 11 | 11 | 100% |
+| **合計** | **46** | **50** | **92%** |
 
 **題目核心要求(促銷 + 優惠券算結算金額)已 100% 做完並通過驗收案例。** 未完成的部分全部集中在「後台管理」與「購物車持久化」這兩塊範圍外的加值功能。
 
@@ -44,6 +44,7 @@
 - [x] 商品瀏覽 API:`GET /api/products`,回傳 4 品類分組共 18 項,價格為字串 — `api/products.py`、`api/schemas.py`
 - [x] 回傳格式轉換純函式:`build_category_groups()`,不經過 HTTP 也能測 — `api/products.py`
 - [x] 結算 API:`POST /api/checkout` 收商品名+數量與券 id,回傳逐項金額明細;`GET /api/coupons` 列出可選優惠券 — `api/checkout.py`、`api/schemas.py`
+- [x] 優惠券可選清單 API:`POST /api/checkout/coupon-options` 依目前購物車回傳每張券的可用狀態(可使用/已過期/未達門檻),門檻以促銷後金額判斷 — `api/checkout.py`、`services/checkout.py`
 - [x] 結算金額由後端依 `CATALOG` 重取單價計算,不接受前端傳價(decisions.md D4) — `api/checkout.py`、`services/checkout.py`
 - [ ] 後台 API:商品目錄、促銷、優惠券管理 — `api/admin.py`(**空殼**,只有 docstring,未在 `main.py` 註冊 router)
 - [ ] 後台 API:手動覆寫「當前日期」,可切回系統真實日期 — `api/admin.py`(**空殼**;`save_current_date()` 已備妥但沒有任何 endpoint 呼叫它,目前只能手改檔案)
@@ -74,7 +75,7 @@
 - [x] 可見的鍵盤 focus 樣式 — `web/index.html`
 - [x] 無框架、免 build、資料以 `textContent` / 建立元素插入(不拼進 `innerHTML`) — `web/index.html`
 - [x] **獨立結帳頁**:點懸浮鈕整頁切換,左側購物車明細、右側結帳欄(優惠券下拉 + 逐項金額 + 確認結帳);空車顯示提示並停用結帳鈕 — `web/index.html`
-- [x] **優惠券選擇介面**:`GET /api/coupons` 載入券清單,選擇後即時重算並顯示券狀態(可使用 / 已過期 / 未達門檻) — `web/index.html`
+- [x] **優惠券選擇介面**:`POST /api/checkout/coupon-options` 載入券清單,可使用的券可點選(選中即重算並高亮),不可用的券標灰並附原因(已過期/未達門檻) — `web/index.html`
 - [x] **結算金額明細**:原價合計、促銷折扣(附促銷名稱)、優惠券折抵、最終結算金額,全部由 `POST /api/checkout` 回傳 — `web/index.html`
 - [ ] 後台管理頁:商品 / 促銷 / 優惠券管理與當前日期切換 — `web/admin.html`(**空殼**,12 行佔位頁,沒有任何 JS)
 - [ ] 購物車頁面:修改 / 刪除已加入的商品(目前結帳頁只能瀏覽,尚不能編輯) — **尚未建立**

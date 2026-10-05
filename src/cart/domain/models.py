@@ -85,3 +85,11 @@ class CheckoutResult:
     coupon_status: str
     applied_coupon: Coupon | None
     applied_promotions: list[Promotion]
+
+
+@dataclass(frozen=True)
+class CouponOption:
+    """一張優惠券在特定結算條件下的可選狀態,供結帳頁列出可點選的券。"""
+
+    coupon: Coupon
+    status: str

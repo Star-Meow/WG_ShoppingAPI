@@ -376,14 +376,62 @@
       font-size: 1.1rem;
     }
 
-    .coupon-select {
+    .coupon-list {
+      margin-top: 0.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .coupon-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
       width: 100%;
-      padding: 0.5rem;
-      font-size: 0.95rem;
+      padding: 0.55rem 0.7rem;
+      font-size: 0.9rem;
+      text-align: left;
       border: 1px solid var(--border);
       border-radius: 0.35rem;
       background-color: #ffffff;
       color: #1f2933;
+      cursor: pointer;
+    }
+
+    .coupon-card:hover:not(:disabled):not(.coupon-card--selected) {
+      border-color: var(--accent);
+    }
+
+    .coupon-card--selected {
+      border: 2px solid var(--accent);
+      background-color: #eef4fc;
+    }
+
+    .coupon-card:disabled {
+      color: var(--muted);
+      background-color: #f5f6f7;
+      cursor: not-allowed;
+    }
+
+    .coupon-card__name {
+      font-weight: 600;
+    }
+
+    .coupon-card__meta {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .coupon-card__status {
+      font-size: 0.78rem;
+    }
+
+    .coupon-card:not(:disabled) .coupon-card__status {
+      color: #2e7d32;
+    }
+
+    .coupon-card:disabled .coupon-card__status {
+      color: #842029;
     }
 
     .coupon-note {
@@ -567,8 +615,8 @@
       <div class="checkout-items" id="checkout-items"></div>
       <aside class="checkout-aside" aria-label="結帳金額與優惠券">
         <h2>結帳金額</h2>
-        <label class="search-box__label" for="coupon-select">本次優惠券</label>
-        <select class="coupon-select" id="coupon-select"></select>
+        <p class="search-box__label" id="coupon-list-label">本次優惠券(僅可用的可點選)</p>
+        <div class="coupon-list" id="coupon-list" role="group" aria-labelledby="coupon-list-label"></div>
         <p class="coupon-note" id="coupon-note"></p>
         <ul class="amount-list" id="amount-list"></ul>
         <div class="amount-list__total" id="amount-total"></div>
@@ -608,8 +656,8 @@
     // 購物車內容,品名為鍵,值含單價字串與數量;目前先存在前端記憶體
     const cart = {};
 
-    // 後端撈回來的優惠券清單與目前選中的券;結算前不得視為可用
-    let availableCoupons = [];
+    // 後端撈回來的優惠券可選清單(含可用狀態)與目前選中的券;結算前不得視為可用
+    let couponOptions = [];
     let selectedCouponId = null;
 
     // 目前使用的提示計時器,用來在重複點擊時取消上一次的隱藏排程
@@ -916,17 +964,11 @@
       });
     }
 
-    // 綁定結帳頁的「繼續購物」鈕與優惠券下拉
+    // 綁定結帳頁的「繼續購物」鈕與確認結帳鈕;優惠券清單的點擊由卡片各自綁定
     function bindCheckoutControls() {
       const back = document.getElementById("checkout-back");
       back.addEventListener("click", function () {
         closeCheckoutView();
-      });
-
-      const select = document.getElementById("coupon-select");
-      select.addEventListener("change", function (event) {
-        selectedCouponId = event.target.value === "" ? null : event.target.value;
-        renderCheckoutAmounts();
       });
 
       const submit = document.getElementById("checkout-submit");
@@ -935,7 +977,7 @@
       });
     }
 
-    // 切換到獨立結帳頁:隱藏目錄、顯示明細,並從後端載入優惠券
+    // 切換到獨立結帳頁:隱藏目錄、顯示明細,並從後端載入優惠券可選清單
     function openCheckoutView() {
       document.getElementById("catalog").hidden = true;
       document.querySelector("header").hidden = true;
@@ -991,44 +1033,130 @@
       return row;
     }
 
-    // 載入優惠券清單,再依目前選項算出結帳金額
+    // 載入優惠券可選清單,再依目前選項算出結帳金額
     async function loadCouponsAndAmounts() {
+      const productNames = Object.keys(cart);
+      if (productNames.length === 0) {
+        renderCouponOptions([]);
+        renderAmountsForEmptyCart();
+        return;
+      }
+      const items = [];
+      for (const productName of productNames) {
+        items.push({ name: productName, quantity: cart[productName].qty });
+      }
       try {
-        availableCoupons = await fetchCoupons();
+        couponOptions = await fetchCouponOptions(items);
       } catch (error) {
         renderCheckoutError(error);
         return;
       }
-      renderCouponSelect();
+      if (!couponOptions.some(function (option) { return option.id === selectedCouponId; })) {
+        selectedCouponId = null;
+      }
+      renderCouponOptions(couponOptions);
       renderCheckoutAmounts();
     }
 
-    // 從後端取得優惠券清單;失敗時拋出錯誤,由呼叫端處理
-    async function fetchCoupons() {
-      const response = await fetch("/api/coupons");
+    // 從後端取得優惠券可選清單(含可用狀態);失敗時拋出錯誤,由呼叫端處理
+    async function fetchCouponOptions(items) {
+      const response = await fetch("/api/checkout/coupon-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: items }),
+      });
       if (!response.ok) {
         throw new Error("伺服器回應 HTTP " + response.status);
       }
       return response.json();
     }
 
-    // 組出優惠券下拉:不使用 + 後端每一張券(名稱 + 門檻折額 + 到期日)
-    function renderCouponSelect() {
-      const select = document.getElementById("coupon-select");
-      select.replaceChildren();
+    // 組出可點選的優惠券清單:「不使用」+ 後端每一張券;不可用的卡片標灰並附原因
+    function renderCouponOptions(options) {
+      const container = document.getElementById("coupon-list");
+      container.replaceChildren();
 
-      const noCoupon = document.createElement("option");
-      noCoupon.value = "";
-      noCoupon.textContent = "不使用優惠券";
-      select.appendChild(noCoupon);
-
-      for (const coupon of availableCoupons) {
-        const option = document.createElement("option");
-        option.value = coupon.id;
-        option.textContent = coupon.name + " · 滿 " + coupon.threshold + " 折 " + coupon.discount + " · 到 " + coupon.expiry_date;
-        select.appendChild(option);
+      container.appendChild(buildNoCouponCard());
+      for (const option of options) {
+        container.appendChild(buildCouponCard(option));
       }
-      select.value = selectedCouponId || "";
+    }
+
+    // 「不使用優惠券」選項;空車或後端清單為空時這是唯一可選項
+    function buildNoCouponCard() {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "coupon-card";
+      if (selectedCouponId === null) {
+        button.classList.add("coupon-card--selected");
+        button.setAttribute("aria-pressed", "true");
+      } else {
+        button.setAttribute("aria-pressed", "false");
+      }
+      button.appendChild(buildCouponName("不使用優惠券"));
+      button.appendChild(buildCouponMeta("以促銷後金額結帳"));
+
+      button.addEventListener("click", function () {
+        selectedCouponId = null;
+        renderCouponOptions(couponOptions);
+        renderCheckoutAmounts();
+      });
+      return button;
+    }
+
+    // 單張優惠券卡片;usable 才可點選,其餘停用並標出原因
+    function buildCouponCard(option) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "coupon-card";
+      button.disabled = option.status !== "usable";
+      if (option.id === selectedCouponId) {
+        button.classList.add("coupon-card--selected");
+        button.setAttribute("aria-pressed", "true");
+      } else {
+        button.setAttribute("aria-pressed", "false");
+      }
+
+      button.appendChild(buildCouponName(option.name));
+      button.appendChild(
+        buildCouponMeta("滿 " + option.threshold + " 折 " + option.discount + " · 到 " + option.expiry_date)
+      );
+      button.appendChild(buildCouponStatus(option));
+
+      button.addEventListener("click", function () {
+        selectedCouponId = option.id;
+        renderCouponOptions(couponOptions);
+        renderCheckoutAmounts();
+      });
+      return button;
+    }
+
+    function buildCouponName(text) {
+      const span = document.createElement("span");
+      span.className = "coupon-card__name";
+      span.textContent = text;
+      return span;
+    }
+
+    function buildCouponMeta(text) {
+      const span = document.createElement("span");
+      span.className = "coupon-card__meta";
+      span.textContent = text;
+      return span;
+    }
+
+    // 券狀態文字:可使用 / 已過期 / 未達門檻(附門檻金額);只有後端能判斷
+    function buildCouponStatus(option) {
+      const span = document.createElement("span");
+      span.className = "coupon-card__status";
+      if (option.status === "expired") {
+        span.textContent = "已過期,本次結算無法使用";
+      } else if (option.status === "below_threshold") {
+        span.textContent = "未達門檻:需促銷後金額滿 " + option.threshold + " 元";
+      } else {
+        span.textContent = "可使用";
+      }
+      return span;
     }
 
     // 依目前購物車與選中的優惠券,向後端要求結算並顯示金額明細
@@ -1078,7 +1206,7 @@
       return response.json();
     }
 
-    // 空車時把金額區清空,只保留合計為 0
+    // 空車時把金額區清空,只保留合計為 0,並清掉優惠券清單
     function renderAmountsForEmptyCart() {
       document.getElementById("amount-list").replaceChildren();
       const total = document.getElementById("amount-total");
@@ -1091,6 +1219,9 @@
       const note = document.getElementById("coupon-note");
       note.textContent = "";
       note.className = "coupon-note";
+      couponOptions = [];
+      selectedCouponId = null;
+      renderCouponOptions([]);
     }
 
     // 繪出後端回傳的金額明細:原價、促銷折扣、優惠券折扣、結算金額
@@ -1142,7 +1273,7 @@
       return centsToText(priceToCents(minuend) - priceToCents(subtrahend));
     }
 
-    // 依後端回傳的券狀態,在下拉下方顯示提示(未達門檻或已過期時警示)
+    // 依後端回傳的券狀態,在清單下方顯示提示(未達門檻或已過期時警示)
     function renderCouponNote(result) {
       const note = document.getElementById("coupon-note");
       note.className = "coupon-note";
@@ -1161,9 +1292,9 @@
 
     // 查詢目前選中券的門檻,用於未達門檻的提示文字
     function thresholdOfSelectedCoupon() {
-      for (const coupon of availableCoupons) {
-        if (coupon.id === selectedCouponId) {
-          return coupon.threshold;
+      for (const option of couponOptions) {
+        if (option.id === selectedCouponId) {
+          return option.threshold;
         }
       }
       return "";

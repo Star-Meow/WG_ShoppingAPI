@@ -27,6 +27,20 @@ class CouponOut(BaseModel):
     discount: str
 
 
+class CouponOptionOut(BaseModel):
+    """回傳給前端的單張優惠券與其在目前購物車下的可用狀態。
+
+    status 由後端依促銷後金額與結算日判斷:usable / expired / below_threshold。
+    """
+
+    id: str
+    name: str
+    expiry_date: str
+    threshold: str
+    discount: str
+    status: str
+
+
 class CheckoutItemIn(BaseModel):
     """前端送來的購物車項目;只收商品名與數量,不收價格(見 decisions.md D4)。"""
 
@@ -39,6 +53,12 @@ class CheckoutRequest(BaseModel):
 
     items: list[CheckoutItemIn]
     coupon_id: str | None = None
+
+
+class CouponOptionsRequest(BaseModel):
+    """優惠券可選清單請求:只收購物車明細,用來判斷每張券的門檻狀態。"""
+
+    items: list[CheckoutItemIn]
 
 
 class CheckoutResultOut(BaseModel):

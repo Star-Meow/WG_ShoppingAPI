@@ -14,6 +14,7 @@ from cart.domain.models import (
     CheckoutInput,
     CheckoutResult,
     Coupon,
+    CouponOption,
     Promotion,
 )
 
@@ -193,3 +194,20 @@ def build_checkout_result(input_data: CheckoutInput) -> CheckoutResult:
         applied_coupon=applied_coupon,
         applied_promotions=applied_promotions,
     )
+
+
+def collect_coupon_options(
+    coupons: list[Coupon],
+    promoted_subtotal: Decimal,
+    checkout_date: date,
+) -> list[CouponOption]:
+    """列出每張優惠券在目前促銷後金額與結算日下是否可用的狀態。
+
+    前端依此把「能用的券」列出來讓使用者點選;狀態一律由後端判斷,
+    前端不自行解讀門檻或到期日。
+    """
+    options = []
+    for coupon in coupons:
+        status = checkout_coupon_status(coupon, promoted_subtotal, checkout_date)
+        options.append(CouponOption(coupon=coupon, status=status))
+    return options

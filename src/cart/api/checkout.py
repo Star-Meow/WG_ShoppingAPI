@@ -12,13 +12,19 @@ from cart.api.schemas import (
     CheckoutItemIn,
     CheckoutRequest,
     CheckoutResultOut,
+    CouponOptionOut,
+    CouponOptionsRequest,
     CouponOut,
 )
 from cart.domain.catalog import find_product_by_name
 from cart.domain.errors import UnknownCouponError, UnknownProductError
 from cart.domain.models import Cart, CartItem, CheckoutInput
 from cart.repository import json_store
-from cart.services.checkout import build_checkout_result
+from cart.services.checkout import (
+    build_checkout_result,
+    calculate_promoted_subtotal,
+    collect_coupon_options,
+)
 
 router = APIRouter(prefix="/api", tags=["checkout"])
 
@@ -63,11 +69,41 @@ def to_coupon_out(coupon) -> CouponOut:
     )
 
 
+def to_coupon_option_out(option) -> CouponOptionOut:
+    """把領域的單張券可選狀態轉成 API 回傳格式。"""
+    coupon = option.coupon
+    return CouponOptionOut(
+        id=coupon.id,
+        name=coupon.name,
+        expiry_date=coupon.expiry_date.isoformat(),
+        threshold=str(coupon.threshold),
+        discount=str(coupon.discount),
+        status=option.status,
+    )
+
+
 @router.get("/coupons")
 def list_coupons() -> list[CouponOut]:
     """列出目前可選的優惠券(前端用來顯示選單,是否可用由結算結果判斷)。"""
     coupons = json_store.load_coupons()
     return [to_coupon_out(coupon) for coupon in coupons]
+
+
+@router.post("/checkout/coupon-options")
+def list_coupon_options(request: CouponOptionsRequest) -> list[CouponOptionOut]:
+    """依目前購物車列出每張優惠券的可用狀態,供結帳頁顯示可點選的券清單。
+
+    門檻以促銷折扣後的金額判斷(業務規則 3),金額與狀態一律由後端計算。
+    """
+    cart = build_cart(request.items)
+    checkout_date = resolve_current_date()
+    promoted_subtotal = calculate_promoted_subtotal(
+        cart, json_store.load_promotions(), checkout_date
+    )
+    options = collect_coupon_options(
+        json_store.load_coupons(), promoted_subtotal, checkout_date
+    )
+    return [to_coupon_option_out(option) for option in options]
 
 
 @router.post("/checkout")
