@@ -1,1 +1,46 @@
-{}
+{
+  "promotions": [
+    {
+      "name": "雙 11 電子品類 7 折",
+      "date": "2026-11-11",
+      "discount": "0.7",
+      "category": "電子"
+    },
+    {
+      "name": "聖誕節食品 8 折",
+      "date": "2026-12-25",
+      "discount": "0.8",
+      "category": "食品"
+    }
+  ],
+  "coupons": [
+    {
+      "id": "COUPON-100-10",
+      "name": "滿百折十",
+      "expiry_date": "2027-06-30",
+      "threshold": "100",
+      "discount": "10"
+    },
+    {
+      "id": "COUPON-1000-100",
+      "name": "滿千折百",
+      "expiry_date": "2026-12-31",
+      "threshold": "1000",
+      "discount": "100"
+    },
+    {
+      "id": "COUPON-3000-500",
+      "name": "滿三千折五百",
+      "expiry_date": "2026-12-31",
+      "threshold": "3000",
+      "discount": "500"
+    },
+    {
+      "id": "COUPON-EXPIRED-50",
+      "name": "端午滿千折五十(已過期)",
+      "expiry_date": "2026-06-30",
+      "threshold": "1000",
+      "discount": "50"
+    }
+  ]
+}

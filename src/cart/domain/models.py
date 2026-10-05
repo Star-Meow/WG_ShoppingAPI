@@ -28,15 +28,22 @@ class Promotion:
     date: date
     discount: Decimal
     category: Category
+    name: str = ""
 
 
 @dataclass(frozen=True)
 class Coupon:
-    """優惠券:有效期內且金額達門檻時,折抵固定金額。"""
+    """優惠券:有效期內且金額達門檻時,折抵固定金額。
+
+    id 與 name 是給前台與 API 使用的識別與顯示文字,不參與金額計算;
+    從測試案例文字解析出來的券沒有這兩個欄位(維持空字串)。
+    """
 
     expiry_date: date
     threshold: Decimal
     discount: Decimal
+    id: str = ""
+    name: str = ""
 
 
 @dataclass(frozen=True)
@@ -61,3 +68,20 @@ class CheckoutInput:
     promotions: list[Promotion]
     checkout_date: date
     coupon: Coupon | None = None
+
+
+@dataclass(frozen=True)
+class CheckoutResult:
+    """結算明細:把計算過程的每一步金額都暴露出來,供前端逐項顯示。
+
+    優惠券折抵可能因過期或未達門檻而不成立,此時 discount 為 0、
+    coupon_status 說明原因;applied_coupon 記錄實際套用的券。
+    """
+
+    original_subtotal: Decimal
+    promoted_subtotal: Decimal
+    coupon_discount: Decimal
+    total: Decimal
+    coupon_status: str
+    applied_coupon: Coupon | None
+    applied_promotions: list[Promotion]

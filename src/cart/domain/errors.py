@@ -31,3 +31,7 @@ class CouponNotApplicableError(CheckoutError):
 
 class ProductNotInPromoCategoryError(CheckoutError):
     """商品不屬於任何促銷品類,但呼叫端要求套用促銷時拋出。"""
+
+
+class UnknownCouponError(CheckoutError):
+    """前端傳來的優惠券代號在系統中找不到時拋出。"""

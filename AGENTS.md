@@ -209,22 +209,24 @@ shopping_cart/
 
 #### 資料層 repository/
 
-- [ ] JSON 讀寫:讀 `data/seed.json`、寫 `data/runtime.json`(domain 與 services 不得直接讀寫檔案) — `repository/json_store.py`(空殼)
+- [x] JSON 讀取:從 `data/seed.json` 讀促銷與優惠券、依 id 查券;`data/runtime.json` 讀寫「當前日期」覆寫 — `repository/json_store.py`
+- [ ] JSON 寫入:把後台異動(目錄/促銷/優惠券)寫回 `seed.json` — 尚未實作(後台管理功能暫緩)
 
 #### API 層 api/
 
 - [x] 商品瀏覽 API:`GET /api/products`,回傳 4 品類分組共 18 項,價格為字串 — `api/products.py`、`api/schemas.py`
 - [x] 回傳格式轉換純函式:`build_category_groups()`,不經過 HTTP 也能測 — `api/products.py`
-- [ ] 結算 API:接收購物車與優惠券 → 呼叫 service → 回傳金額 — `api/checkout.py`(空殼)
-- [ ] 後台 API:商品目錄、促銷、優惠券管理 — `api/admin.py`(空殼)
-- [ ] 後台 API:手動覆寫「當前日期」,可切回系統真實日期 — `api/admin.py`(空殼)
+- [x] 結算 API:`POST /api/checkout` 收商品名+數量與券 id,回傳逐項金額明細;`GET /api/coupons` 列出可選優惠券 — `api/checkout.py`、`api/schemas.py`
+- [x] 結算金額由後端依 `CATALOG` 重取單價計算,不接受前端傳價(decisions.md D4) — `api/checkout.py`、`services/checkout.py`
+- [ ] 後台 API:商品目錄、促銷、優惠券管理 — `api/admin.py`(空殼,**此功能暫緩**)
+- [ ] 後台 API:手動覆寫「當前日期」,可切回系統真實日期 — `api/admin.py`(空殼;讀寫機制已在 `repository/json_store.py` 備妥,endpoint 尚未開)
 - [ ] 購物車 API:新增 / 修改 / 查詢購物車項目 — 尚未建立
 
 #### 進入點與設定
 
 - [x] FastAPI app 建立、API router 先註冊、靜態檔掛載在最後 — `main.py`
 - [x] 路徑集中設定:web 目錄、`data/` 目錄(以 `pathlib` 依檔案位置推算) — `config.py`
-- [ ] 「當前日期」由最外層決定並往內傳的機制(業務規則不得自行呼叫 `date.today()`) — 尚未實作
+- [x] 「當前日期」由最外層決定並往內傳:API 層讀 `runtime.json` 覆寫值,無覆寫才用 `date.today()`,service 不碰系統時間 — `api/checkout.py`、`repository/json_store.py`
 
 #### 命令列 cli/
 
@@ -239,16 +241,18 @@ shopping_cart/
 - [x] 加入購物車按鈕:每張卡片一顆,點擊把目前數量加進購物車並顯示「已加入購物車:{品名} × {數量}」提示 — `web/index.html`
 - [x] 數量調整元件:每張卡片上有 `- [數量] +`,最低 1,數量為 1 時停用減號鈕 — `web/index.html`
 - [x] 右下角懸浮購物車鈕:`position: fixed` 固定於畫面右下角,附商品總數角標(0 時隱藏) — `web/index.html`
-- [x] 購物籃畫面:點懸浮鈕展開,逐項顯示品名、單價 × 數量、該項小計與合計;空車顯示「購物車是空的」 — `web/index.html`
-- [x] 前端購物車狀態:目前以 JS 物件存在記憶體,金額用整數分計算避免 float 誤差(見下方「購物車資料流向」) — `web/index.html`
+- [x] 前端購物車狀態:目前以 JS 物件存在記憶體,金額用整數分計算避免 float 小數誤差(見下方「購物車資料流向」) — `web/index.html`
 - [x] 三種狀態處理:載入中 / 成功 / 失敗(失敗時附錯誤與排除方式);查無商品時顯示「查無符合的商品」 — `web/index.html`
 - [x] 響應式版面:手機寬度可讀 — `web/index.html`
 - [x] 可見的鍵盤 focus 樣式 — `web/index.html`
 - [x] 無框架、免 build、資料以 `textContent` / 建立元素插入(不拼進 `innerHTML`) — `web/index.html`
-- [ ] 後台管理頁:商品 / 促銷 / 優惠券管理與當前日期切換 — `web/admin.html`(空殼)
-- [ ] 購物車頁面:修改 / 刪除已加入的商品(目前購物籃只能瀏覽,尚不能編輯) — 尚未建立
-- [ ] 結算頁面:顯示促銷折扣後金額與最終金額 — 尚未建立
-- [ ] 優惠券選擇介面 — 尚未建立(先等「待決定」項目定案)
+- [x] **獨立結帳頁**:點懸浮鈕整頁切換,左側購物車明細、右側結帳欄(優惠券下拉 + 逐項金額 + 確認結帳);空車顯示提示並停用結帳鈕 — `web/index.html`
+- [x] **優惠券選擇介面**:`GET /api/coupons` 載入券清單,選擇後即時重算並顯示券狀態(可使用 / 已過期 / 未達門檻) — `web/index.html`
+- [x] **結算金額明細**:原價合計、促銷折扣(附促銷名稱)、優惠券折抵、最終結算金額,全部由 `POST /api/checkout` 回傳 — `web/index.html`
+- [ ] 後台管理頁:商品 / 促銷 / 優惠券管理與當前日期切換 — `web/admin.html`(空殼,**此功能暫緩**)
+- [ ] 購物車頁面:修改 / 刪除已加入的商品(目前結帳頁只能瀏覽,尚不能編輯) — 尚未建立
+
+> 舊的購物籃下拉面板已移除,改由獨立結帳頁取代。
 
 ### 測試 tests/
 
@@ -257,32 +261,33 @@ shopping_cart/
 - [x] 商品 API 測試:`GET /api/products` 與 `GET /` 經 `TestClient` — `tests/api/test_products_api.py`
 - [x] 驗收案例 fixture:`case_a.txt`(預期 3083.60)、`case_b.txt`(預期 43.54) — `tests/fixtures/`
 - [x] 結算規則單元測試:促銷生效/不生效、券過期/門檻/促銷後門檻、四捨五入(22 項) — `tests/unit/test_checkout.py`
+- [x] 結算明細單元測試:`build_checkout_result` 的原價/促銷後/券折抵/券狀態(7 項) — `tests/unit/test_checkout_result.py`
 - [x] 解析器單元測試:日期/促銷/明細/優惠券解析、錯誤案例(18 項) — `tests/unit/test_parser.py`
 - [x] CLI 端對端測試:子程序執行 `python -m cart.cli`,印出預期金額與錯誤處理(5 項) — `tests/unit/test_cli.py`
+- [x] 結算 API 測試:`GET /api/coupons`、`POST /api/checkout` 含促銷生效、券三狀態與 400 錯誤(8 項) — `tests/api/test_checkout_api.py`
 - [x] 驗收案例端對端測試:讀 fixture → 解析 → 結算 → 比對 3083.60 / 43.54 — `tests/acceptance/test_cases.py`
 
 ### 完成度摘要
 
 | 類別 | 已完成 | 總項目 |
 | --- | --- | --- |
-| 後端 | 15 | 22 |
-| 前端 | 12 | 16 |
-| 測試 | 8 | 8 |
-| **合計** | **35** | **46** |
+| 後端 | 19 | 22 |
+| 前端 | 15 | 17 |
+| 測試 | 10 | 10 |
+| **合計** | **44** | **49** |
 
 ### 購物車資料流向(重要)
 
 目前購物車狀態**只存在前端 JS 記憶體**(`cart` 物件),重新整理頁面就會清空。**尚未透過後端 API 儲存**。完整的方案評估(為何不用 DB、為何不做登入、資料職責分類)見 [docs/decisions.md](docs/decisions.md),以下只列對實作的直接影響:
 
-- 後端購物車 API(`api/checkout.py`)仍是空殼,沒有可呼叫的 endpoint;`services/checkout.py` 已是純函式實作,API 只需薄薄接上一層。
-- 依「目前以前端修正為主」的方向,先把互動做出來,不為了儲存而提前實作後端。
-- 前端已把購物車操作集中在少數函式中(`addToCart`、`renderCartBadge`、`renderCartPanel`),日後後端 API 上市時,只要改這幾個函式內部去呼叫 API,卡片與面板的繪製邏輯都不用動。
+- 後端結算 API(`POST /api/checkout`、`GET /api/coupons`)已實作,但**購物車本身**仍只存前端記憶體,沒有後端購物車 API。
+- 前端已把購物車操作集中在少數函式中(`addToCart`、`renderCartBadge`、`renderCheckoutItems`),日後接後端購物車 API 時,只要改這幾個函式內部去呼叫 API,明細與結帳欄的繪製邏輯都不用動。
 - 金額計算使用整數「分」(`priceToCents` / `centsToText`),避免 float 小數誤差,與後端 `Decimal` 的精神一致。
 - **金額的唯一信任來源是後端**:結算時後端只收商品名 + 數量,價格重取 `CATALOG`,不接受前端傳價(見 decisions.md D4)。
 
 未來接後端時已定案的方向(decisions.md D3):以 session 為購物車錨點,session id 放 `httpOnly` cookie;待需會員功能時才考慮登入系統。
 
-下一步建議順序:領域模型 → 結算服務 → CLI(已完成)→ 結算 API → 購物車 API → 後台 → 前端購物車與結算頁。每一層都先寫單元測試再實作。
+下一步建議順序:領域模型 → 結算服務 → CLI → 結算 API → 前端結帳頁(已完成)→ 後台發券(暫緩,待「多券擇優」定案)→ 後端購物車 API → 前端購物車編輯頁。每一層都先寫單元測試再實作。
 
 ## 八、Git 工作流
 

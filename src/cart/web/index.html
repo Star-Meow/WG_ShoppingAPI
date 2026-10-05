@@ -11,6 +11,7 @@
       --border: #d5d9e0;
       --muted: #6b7280;
       --error-bg: #fdecea;
+      --success-bg: #e8f5e9;
     }
 
     * {
@@ -272,90 +273,200 @@
       display: none;
     }
 
-    /* 點開懸浮鈕後展開的購物籃畫面 */
-    .cart-panel {
-      position: fixed;
-      right: 1.5rem;
-      bottom: 5.5rem;
-      width: min(360px, calc(100vw - 3rem));
-      max-height: 60vh;
-      overflow-y: auto;
-      padding: 1rem;
-      background-color: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 0.75rem;
-      box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.25);
-      z-index: 100;
+    /* 獨立結帳頁:點開懸浮鈕後取代整個目錄畫面 */
+    .checkout-view {
+      max-width: 960px;
+      margin: 0 auto;
     }
 
-    .cart-panel[hidden] {
+    .checkout-view[hidden] {
       display: none;
     }
 
-    .cart-panel__header {
+    .checkout-view__header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.75rem;
+      margin-bottom: 1rem;
       padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--border);
     }
 
-    .cart-panel__title {
+    .checkout-view__title {
       margin: 0;
-      font-size: 1.1rem;
+      font-size: 1.4rem;
     }
 
-    .cart-panel__close {
-      padding: 0.25rem 0.6rem;
-      font-size: 0.85rem;
-      color: var(--muted);
+    .checkout-view__back {
+      padding: 0.4rem 0.9rem;
+      font-size: 0.9rem;
+      color: var(--accent);
       background-color: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 0.35rem;
+      border: 1px solid var(--accent);
+      border-radius: 2rem;
       cursor: pointer;
     }
 
-    .cart-panel__empty {
+    .checkout-view__back:hover {
+      background-color: #eaf1fb;
+    }
+
+    /* 結帳頁版面:左側明細 / 右側結帳與優惠券 */
+    .checkout-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .checkout-items {
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background-color: #ffffff;
+    }
+
+    .checkout-items__empty {
       margin: 0;
-      padding: 1rem 0;
+      padding: 1.5rem 0;
       text-align: center;
       color: var(--muted);
     }
 
-    .cart-panel__row {
+    .checkout-item {
       display: flex;
       justify-content: space-between;
       gap: 0.75rem;
-      padding: 0.5rem 0;
+      padding: 0.6rem 0;
       border-bottom: 1px dashed var(--border);
     }
 
-    .cart-panel__name {
-      font-size: 0.95rem;
+    .checkout-item:last-child {
+      border-bottom: none;
     }
 
-    .cart-panel__unit {
+    .checkout-item__name {
+      font-size: 1rem;
+    }
+
+    .checkout-item__unit {
       margin-top: 0.2rem;
       font-size: 0.8rem;
       color: var(--muted);
     }
 
-    .cart-panel__lineTotal {
+    .checkout-item__lineTotal {
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
 
-    .cart-panel__total {
+    /* 右側結帳欄:優惠券選擇與金額明細 */
+    .checkout-aside {
+      position: sticky;
+      top: 1rem;
+      padding: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      background-color: #ffffff;
+    }
+
+    .checkout-aside h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1.1rem;
+    }
+
+    .coupon-select {
+      width: 100%;
+      padding: 0.5rem;
+      font-size: 0.95rem;
+      border: 1px solid var(--border);
+      border-radius: 0.35rem;
+      background-color: #ffffff;
+      color: #1f2933;
+    }
+
+    .coupon-note {
+      margin: 0.5rem 0 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .coupon-note--warn {
+      color: #842029;
+    }
+
+    .amount-list {
+      margin: 0.75rem 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .amount-list__row {
       display: flex;
       justify-content: space-between;
-      margin-top: 0.75rem;
+      padding: 0.35rem 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .amount-list__row span:last-child {
+      color: #1f2933;
+    }
+
+    .amount-list__row--promotion span {
+      color: #2e7d32;
+    }
+
+    .amount-list__total {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 0.5rem;
       padding-top: 0.6rem;
       border-top: 2px solid var(--accent);
       font-weight: 700;
-      font-size: 1.05rem;
+      font-size: 1.1rem;
       font-variant-numeric: tabular-nums;
+    }
+
+    .checkout-aside__button {
+      width: 100%;
+      margin-top: 0.85rem;
+      padding: 0.6rem;
+      font-size: 1rem;
+      color: #ffffff;
+      background-color: var(--accent);
+      border: none;
+      border-radius: 0.35rem;
+      cursor: pointer;
+    }
+
+    .checkout-aside__button:hover:not(:disabled) {
+      background-color: var(--accent-dark);
+    }
+
+    .checkout-aside__button:disabled {
+      background-color: #c0c6cf;
+      cursor: not-allowed;
+    }
+
+    .checkout-status {
+      margin-top: 0.75rem;
+      padding: 0.6rem 0.75rem;
+      font-size: 0.85rem;
+      border-radius: 0.35rem;
+      background-color: var(--success-bg);
+      color: #1b5e20;
+    }
+
+    .checkout-status--error {
+      background-color: var(--error-bg);
+      color: #842029;
+    }
+
+    .checkout-status[hidden] {
+      display: none;
     }
 
     /* 加入購物車的提示:短暫顯示後自動消失 */
@@ -383,10 +494,21 @@
     a:focus-visible,
     button:focus-visible,
     input:focus-visible,
+    select:focus-visible,
     [tabindex]:focus-visible {
       outline: 3px solid var(--accent);
       outline-offset: 2px;
       border-radius: 0.25rem;
+    }
+
+    @media (max-width: 760px) {
+      .checkout-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .checkout-aside {
+        position: static;
+      }
     }
 
     @media (max-width: 480px) {
@@ -415,11 +537,6 @@
         right: 1rem;
         bottom: 1rem;
       }
-
-      .cart-panel {
-        right: 1rem;
-        bottom: 5rem;
-      }
     }
   </style>
 </head>
@@ -440,18 +557,31 @@
     </div>
   </main>
 
-  <button class="cart-fab" id="cart-fab" type="button" aria-label="開啟購物車">
+  <!-- 獨立結帳頁:點開購物車後整頁切換到這裡 -->
+  <section class="checkout-view" id="checkout-view" hidden aria-label="結帳頁面">
+    <div class="checkout-view__header">
+      <h2 class="checkout-view__title">結帳</h2>
+      <button class="checkout-view__back" id="checkout-back" type="button">繼續購物</button>
+    </div>
+    <div class="checkout-layout">
+      <div class="checkout-items" id="checkout-items"></div>
+      <aside class="checkout-aside" aria-label="結帳金額與優惠券">
+        <h2>結帳金額</h2>
+        <label class="search-box__label" for="coupon-select">本次優惠券</label>
+        <select class="coupon-select" id="coupon-select"></select>
+        <p class="coupon-note" id="coupon-note"></p>
+        <ul class="amount-list" id="amount-list"></ul>
+        <div class="amount-list__total" id="amount-total"></div>
+        <button class="checkout-aside__button" id="checkout-submit" type="button">確認結帳</button>
+        <p class="checkout-status" id="checkout-status" hidden></p>
+      </aside>
+    </div>
+  </section>
+
+  <button class="cart-fab" id="cart-fab" type="button" aria-label="開啟結帳頁面">
     🛒
     <span class="cart-fab__badge cart-fab__badge--hidden" id="cart-fab__badge">0</span>
   </button>
-
-  <section class="cart-panel" id="cart-panel" hidden aria-label="購物車內容">
-    <div class="cart-panel__header">
-      <h2 class="cart-panel__title">購物車</h2>
-      <button class="cart-panel__close" id="cart-close" type="button">關閉</button>
-    </div>
-    <div id="cart-panel__body"></div>
-  </section>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -477,6 +607,10 @@
 
     // 購物車內容,品名為鍵,值含單價字串與數量;目前先存在前端記憶體
     const cart = {};
+
+    // 後端撈回來的優惠券清單與目前選中的券;結算前不得視為可用
+    let availableCoupons = [];
+    let selectedCouponId = null;
 
     // 目前使用的提示計時器,用來在重複點擊時取消上一次的隱藏排程
     let toastTimer = null;
@@ -674,7 +808,6 @@
         };
       }
       renderCartBadge();
-      renderCartPanel();
     }
 
     // 把價格字串(如 "2399.00")換算成整數分,避免 float 小數誤差
@@ -705,72 +838,12 @@
       return count;
     }
 
-    // 計算購物車合計金額(整數分)
-    function calculateCartTotalCents() {
-      let totalCents = 0;
-      for (const productName of Object.keys(cart)) {
-        const item = cart[productName];
-        totalCents = totalCents + priceToCents(item.price) * item.qty;
-      }
-      return totalCents;
-    }
-
     // 更新懸浮鈕上的商品總數角標;總數為 0 時隱藏
     function renderCartBadge() {
       const badge = document.getElementById("cart-fab__badge");
       const count = calculateCartCount();
       badge.textContent = count;
       badge.classList.toggle("cart-fab__badge--hidden", count === 0);
-    }
-
-    // 重新繪製購物籃畫面;空車時顯示提示,有品項時逐項列出並算合計
-    function renderCartPanel() {
-      const body = document.getElementById("cart-panel__body");
-      body.replaceChildren();
-
-      const productNames = Object.keys(cart);
-      if (productNames.length === 0) {
-        const empty = document.createElement("p");
-        empty.className = "cart-panel__empty";
-        empty.textContent = "購物車是空的";
-        body.appendChild(empty);
-        return;
-      }
-
-      for (const productName of productNames) {
-        body.appendChild(buildCartRow(cart[productName]));
-      }
-
-      const total = document.createElement("div");
-      total.className = "cart-panel__total";
-      const totalLabel = document.createElement("span");
-      totalLabel.textContent = "合計";
-      const totalValue = document.createElement("span");
-      totalValue.textContent = centsToText(calculateCartTotalCents()) + " 元";
-      total.append(totalLabel, totalValue);
-      body.appendChild(total);
-    }
-
-    // 組出購物籃內的單一品項(品名、單價 × 數量、該項小計)
-    function buildCartRow(item) {
-      const row = document.createElement("div");
-      row.className = "cart-panel__row";
-
-      const info = document.createElement("div");
-      const name = document.createElement("div");
-      name.className = "cart-panel__name";
-      name.textContent = item.name;
-      const unit = document.createElement("div");
-      unit.className = "cart-panel__unit";
-      unit.textContent = item.price + " 元 × " + item.qty;
-      info.append(name, unit);
-
-      const lineTotal = document.createElement("div");
-      lineTotal.className = "cart-panel__lineTotal";
-      lineTotal.textContent = centsToText(priceToCents(item.price) * item.qty) + " 元";
-
-      row.append(info, lineTotal);
-      return row;
     }
 
     // 顯示「已加入購物車」的提示,2 秒後自動消失
@@ -835,17 +908,305 @@
       });
     }
 
-    // 綁定懸浮購物車鈕:點擊展開或收起購物籃畫面
+    // 綁定懸浮購物車鈕:點擊後切換到獨立結帳頁
     function bindCartFab() {
       const fab = document.getElementById("cart-fab");
-      const panel = document.getElementById("cart-panel");
       fab.addEventListener("click", function () {
-        panel.hidden = !panel.hidden;
+        openCheckoutView();
       });
-      const close = document.getElementById("cart-close");
-      close.addEventListener("click", function () {
-        panel.hidden = true;
+    }
+
+    // 綁定結帳頁的「繼續購物」鈕與優惠券下拉
+    function bindCheckoutControls() {
+      const back = document.getElementById("checkout-back");
+      back.addEventListener("click", function () {
+        closeCheckoutView();
       });
+
+      const select = document.getElementById("coupon-select");
+      select.addEventListener("change", function (event) {
+        selectedCouponId = event.target.value === "" ? null : event.target.value;
+        renderCheckoutAmounts();
+      });
+
+      const submit = document.getElementById("checkout-submit");
+      submit.addEventListener("click", function () {
+        submitCheckout();
+      });
+    }
+
+    // 切換到獨立結帳頁:隱藏目錄、顯示明細,並從後端載入優惠券
+    function openCheckoutView() {
+      document.getElementById("catalog").hidden = true;
+      document.querySelector("header").hidden = true;
+      document.getElementById("checkout-view").hidden = false;
+      renderCheckoutItems();
+      loadCouponsAndAmounts();
+    }
+
+    // 回到目錄頁
+    function closeCheckoutView() {
+      document.getElementById("catalog").hidden = false;
+      document.querySelector("header").hidden = false;
+      document.getElementById("checkout-view").hidden = true;
+    }
+
+    // 繪出結帳頁左側的購物車明細;空車時顯示提示
+    function renderCheckoutItems() {
+      const container = document.getElementById("checkout-items");
+      container.replaceChildren();
+
+      const productNames = Object.keys(cart);
+      if (productNames.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "checkout-items__empty";
+        empty.textContent = "購物車是空的,請先回到目錄挑選商品";
+        container.appendChild(empty);
+        return;
+      }
+      for (const productName of productNames) {
+        container.appendChild(buildCheckoutItem(cart[productName]));
+      }
+    }
+
+    // 組出結帳頁內的單一品項(品名、單價 × 數量、該項小計)
+    function buildCheckoutItem(item) {
+      const row = document.createElement("div");
+      row.className = "checkout-item";
+
+      const info = document.createElement("div");
+      const name = document.createElement("div");
+      name.className = "checkout-item__name";
+      name.textContent = item.name;
+      const unit = document.createElement("div");
+      unit.className = "checkout-item__unit";
+      unit.textContent = item.price + " 元 × " + item.qty;
+      info.append(name, unit);
+
+      const lineTotal = document.createElement("div");
+      lineTotal.className = "checkout-item__lineTotal";
+      lineTotal.textContent = centsToText(priceToCents(item.price) * item.qty) + " 元";
+
+      row.append(info, lineTotal);
+      return row;
+    }
+
+    // 載入優惠券清單,再依目前選項算出結帳金額
+    async function loadCouponsAndAmounts() {
+      try {
+        availableCoupons = await fetchCoupons();
+      } catch (error) {
+        renderCheckoutError(error);
+        return;
+      }
+      renderCouponSelect();
+      renderCheckoutAmounts();
+    }
+
+    // 從後端取得優惠券清單;失敗時拋出錯誤,由呼叫端處理
+    async function fetchCoupons() {
+      const response = await fetch("/api/coupons");
+      if (!response.ok) {
+        throw new Error("伺服器回應 HTTP " + response.status);
+      }
+      return response.json();
+    }
+
+    // 組出優惠券下拉:不使用 + 後端每一張券(名稱 + 門檻折額 + 到期日)
+    function renderCouponSelect() {
+      const select = document.getElementById("coupon-select");
+      select.replaceChildren();
+
+      const noCoupon = document.createElement("option");
+      noCoupon.value = "";
+      noCoupon.textContent = "不使用優惠券";
+      select.appendChild(noCoupon);
+
+      for (const coupon of availableCoupons) {
+        const option = document.createElement("option");
+        option.value = coupon.id;
+        option.textContent = coupon.name + " · 滿 " + coupon.threshold + " 折 " + coupon.discount + " · 到 " + coupon.expiry_date;
+        select.appendChild(option);
+      }
+      select.value = selectedCouponId || "";
+    }
+
+    // 依目前購物車與選中的優惠券,向後端要求結算並顯示金額明細
+    async function renderCheckoutAmounts() {
+      const productNames = Object.keys(cart);
+      const submit = document.getElementById("checkout-submit");
+      if (productNames.length === 0) {
+        renderAmountsForEmptyCart();
+        submit.disabled = true;
+        return;
+      }
+      submit.disabled = true;
+      showCheckoutStatus("計算中…", false);
+
+      const items = [];
+      for (const productName of productNames) {
+        items.push({ name: productName, quantity: cart[productName].qty });
+      }
+      const body = { items: items };
+      if (selectedCouponId !== null) {
+        body.coupon_id = selectedCouponId;
+      }
+
+      try {
+        const result = await fetchCheckout(body);
+        renderAmounts(result);
+        renderCouponNote(result);
+        hideCheckoutStatus();
+      } catch (error) {
+        renderCheckoutError(error);
+        return;
+      }
+      submit.disabled = false;
+    }
+
+    // 呼叫後端結算 API;失敗時拋出錯誤,由呼叫端處理
+    async function fetchCheckout(body) {
+      const response = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error("結算失敗(HTTP " + response.status + "):" + detail);
+      }
+      return response.json();
+    }
+
+    // 空車時把金額區清空,只保留合計為 0
+    function renderAmountsForEmptyCart() {
+      document.getElementById("amount-list").replaceChildren();
+      const total = document.getElementById("amount-total");
+      total.replaceChildren();
+      const label = document.createElement("span");
+      label.textContent = "結算金額";
+      const value = document.createElement("span");
+      value.textContent = "0.00 元";
+      total.append(label, value);
+      const note = document.getElementById("coupon-note");
+      note.textContent = "";
+      note.className = "coupon-note";
+    }
+
+    // 繪出後端回傳的金額明細:原價、促銷折扣、優惠券折扣、結算金額
+    function renderAmounts(result) {
+      const list = document.getElementById("amount-list");
+      list.replaceChildren();
+
+      list.appendChild(buildAmountRow("原價合計", result.original_subtotal, false));
+
+      const promotionDiscount = subtractAmounts(result.original_subtotal, result.promoted_subtotal);
+      if (promotionDiscount !== "0.00") {
+        for (const promotionName of result.applied_promotion_names) {
+          list.appendChild(buildAmountRow("促銷:" + promotionName, "−" + promotionDiscount, true));
+        }
+      }
+
+      if (result.coupon_discount !== "0.00") {
+        const couponName = result.applied_coupon_name || "優惠券";
+        list.appendChild(buildAmountRow("優惠券:" + couponName, "−" + result.coupon_discount, true));
+      }
+
+      const total = document.getElementById("amount-total");
+      total.replaceChildren();
+      const totalLabel = document.createElement("span");
+      totalLabel.textContent = "結算金額";
+      const totalValue = document.createElement("span");
+      totalValue.textContent = result.total + " 元";
+      total.append(totalLabel, totalValue);
+    }
+
+    // 組出金額明細的單一行(標籤 + 金額)
+    function buildAmountRow(label, value, isDiscount) {
+      const row = document.createElement("li");
+      if (isDiscount) {
+        row.className = "amount-list__row amount-list__row--promotion";
+      } else {
+        row.className = "amount-list__row";
+      }
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = label;
+      const valueSpan = document.createElement("span");
+      valueSpan.textContent = value + " 元";
+      row.append(labelSpan, valueSpan);
+      return row;
+    }
+
+    // 用整數分相減兩個金額字串,避免 float 小數誤差
+    function subtractAmounts(minuend, subtrahend) {
+      return centsToText(priceToCents(minuend) - priceToCents(subtrahend));
+    }
+
+    // 依後端回傳的券狀態,在下拉下方顯示提示(未達門檻或已過期時警示)
+    function renderCouponNote(result) {
+      const note = document.getElementById("coupon-note");
+      note.className = "coupon-note";
+      if (result.coupon_status === "below_threshold") {
+        note.textContent = "優惠券未達門檻:需促銷後金額滿 " + thresholdOfSelectedCoupon() + " 元";
+        note.classList.add("coupon-note--warn");
+        return;
+      }
+      if (result.coupon_status === "expired") {
+        note.textContent = "優惠券已過期,本次結算未折抵";
+        note.classList.add("coupon-note--warn");
+        return;
+      }
+      note.textContent = "每次結算只能使用一張優惠券";
+    }
+
+    // 查詢目前選中券的門檻,用於未達門檻的提示文字
+    function thresholdOfSelectedCoupon() {
+      for (const coupon of availableCoupons) {
+        if (coupon.id === selectedCouponId) {
+          return coupon.threshold;
+        }
+      }
+      return "";
+    }
+
+    // 顯示結帳頁下方的狀態列(成功或錯誤訊息)
+    function showCheckoutStatus(message, isError) {
+      const status = document.getElementById("checkout-status");
+      status.textContent = message;
+      status.hidden = false;
+      if (isError) {
+        status.className = "checkout-status checkout-status--error";
+      } else {
+        status.className = "checkout-status";
+      }
+    }
+
+    function hideCheckoutStatus() {
+      const status = document.getElementById("checkout-status");
+      status.hidden = true;
+    }
+
+    // 結帳頁的載入或結算失敗:顯示錯誤與排除方式
+    function renderCheckoutError(error) {
+      showCheckoutStatus(
+        "無法完成結算:" + error.message + "。請確認伺服器已啟動( uvicorn cart.main:app --reload --app-dir src )後重試。",
+        true
+      );
+      document.getElementById("checkout-submit").disabled = true;
+    }
+
+    // 確認結帳:金額已由後端算出,這裡只顯示結果並清空購物車
+    function submitCheckout() {
+      const totalText = document.getElementById("amount-total").textContent.trim();
+      showCheckoutStatus("結帳完成," + totalText + ",感謝您的購買!", false);
+
+      for (const productName of Object.keys(cart)) {
+        delete cart[productName];
+      }
+      renderCartBadge();
+      renderCheckoutItems();
+      renderAmountsForEmptyCart();
+      document.getElementById("checkout-submit").disabled = true;
     }
 
     // 頁面載入後立即執行的主流程
@@ -853,6 +1214,7 @@
       const grid = document.getElementById("product-grid");
       bindSearchInput();
       bindCartFab();
+      bindCheckoutControls();
       renderCartBadge();
       try {
         const groups = await fetchProducts();

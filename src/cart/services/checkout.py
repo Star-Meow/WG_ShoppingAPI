@@ -8,9 +8,20 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 
 from cart.domain.catalog import Category
-from cart.domain.models import Cart, CartItem, CheckoutInput, Coupon, Promotion
+from cart.domain.models import (
+    Cart,
+    CartItem,
+    CheckoutInput,
+    CheckoutResult,
+    Coupon,
+    Promotion,
+)
 
 TWO_PLACES = Decimal("0.01")
+
+COUPON_STATUS_USABLE = "usable"
+COUPON_STATUS_EXPIRED = "expired"
+COUPON_STATUS_BELOW_THRESHOLD = "below_threshold"
 
 
 def round_to_two_places(amount: Decimal) -> Decimal:
@@ -118,3 +129,67 @@ def calculate_checkout(input_data: CheckoutInput) -> Decimal:
         input_data.checkout_date,
     )
     return round_to_two_places(promoted_subtotal - coupon_discount)
+
+
+def checkout_coupon_status(
+    coupon: Coupon | None,
+    promoted_subtotal: Decimal,
+    checkout_date: date,
+) -> str:
+    """判斷券在目前的促銷後金額與結算日下屬於哪種狀態。
+
+    前端依此顯示「可使用 / 已過期 / 未達門檻」;無券時固定為可使用(折抵 0)。
+    """
+    if coupon is None:
+        return COUPON_STATUS_USABLE
+    if is_coupon_expired(coupon, checkout_date):
+        return COUPON_STATUS_EXPIRED
+    if not is_coupon_threshold_met(coupon, promoted_subtotal):
+        return COUPON_STATUS_BELOW_THRESHOLD
+    return COUPON_STATUS_USABLE
+
+
+def collect_applied_promotions(
+    cart: Cart,
+    promotions: list[Promotion],
+    checkout_date: date,
+) -> list[Promotion]:
+    """列出本次結算實際生效的促銷(供明細顯示),依購物車品項順序。"""
+    applied: list[Promotion] = []
+    for item in cart.items:
+        promotion = find_active_promotion(promotions, item.category, checkout_date)
+        if promotion is not None and promotion not in applied:
+            applied.append(promotion)
+    return applied
+
+
+def build_checkout_result(input_data: CheckoutInput) -> CheckoutResult:
+    """計算結算明細:原價、促銷後金額、券折抵與最終金額,一次算完不重算。"""
+    original_subtotal = input_data.cart.subtotal()
+    promoted_subtotal = calculate_promoted_subtotal(
+        input_data.cart,
+        input_data.promotions,
+        input_data.checkout_date,
+    )
+    status = checkout_coupon_status(
+        input_data.coupon, promoted_subtotal, input_data.checkout_date
+    )
+    coupon_discount = calculate_coupon_discount(
+        input_data.coupon,
+        promoted_subtotal,
+        input_data.checkout_date,
+    )
+    total = round_to_two_places(promoted_subtotal - coupon_discount)
+    applied_coupon = input_data.coupon if coupon_discount > 0 else None
+    applied_promotions = collect_applied_promotions(
+        input_data.cart, input_data.promotions, input_data.checkout_date
+    )
+    return CheckoutResult(
+        original_subtotal=round_to_two_places(original_subtotal),
+        promoted_subtotal=round_to_two_places(promoted_subtotal),
+        coupon_discount=round_to_two_places(coupon_discount),
+        total=total,
+        coupon_status=status,
+        applied_coupon=applied_coupon,
+        applied_promotions=applied_promotions,
+    )
