@@ -62,3 +62,11 @@ def products_by_category() -> dict[Category, list[Product]]:
             grouped[category] = []
         grouped[category].append(product)
     return grouped
+
+
+def find_product_by_name(name: str) -> Product | None:
+    """依名稱查詢商品;查無此商品時回傳 None。"""
+    for product in CATALOG:
+        if product.name == name:
+            return product
+    return None
