@@ -1,6 +1,17 @@
 # AGENTS.md
 
-本檔案給進入此專案的任何人(或 AI agent)快速掌握:需要什麼框架與環境、完整需求清單,以及目前做到哪裡。詳細的架構與風格規則見 [docs/architecture.md](docs/architecture.md),業務規則的逐項說明見 [docs/requirements.md](docs/requirements.md),**評估過後不採用的方案與理由(為何不用 DB、為何不做登入等)見 [docs/decisions.md](docs/decisions.md)**。
+本檔案給進入此專案的任何人(或 AI agent)快速掌握:**要什麼框架與環境、程式碼怎麼寫、怎麼執行**。
+
+需求清單、實作進度、測試清單各自獨立成檔,不放在本檔案,避免一次讀太多:
+
+| 想知道的東西 | 看哪裡 |
+| --- | --- |
+| 業務規則、驗收案例、商品目錄、待決定事項 | [docs/requirements.md](docs/requirements.md) |
+| 哪些功能已實作、哪些還沒、下一步順序 | [docs/feature-checklist.md](docs/feature-checklist.md) |
+| 測了什麼、測試覆蓋的缺口 | [docs/test-checklist.md](docs/test-checklist.md) |
+| 分層依賴、模組職責 | [docs/architecture.md](docs/architecture.md) |
+| 評估過後不採用的方案與理由(為何不用 DB、為何不做登入等) | [docs/decisions.md](docs/decisions.md) |
+| 各功能的實作方式與瀏覽器實測紀錄 | [docs/acceptance-report.md](docs/acceptance-report.md) |
 
 ## 一、專案概述
 
@@ -18,7 +29,7 @@
 | 前端 | 純 HTML + 原生 JavaScript(`fetch`) | **禁止** Vue / React / Alpine.js,**禁止** npm / build |
 | 資料驗證 | Pydantic | schema 只能出現在 `api/` 層 |
 | 金額 | `Decimal` | **嚴禁 float**;API 輸出為字串,最後四捨五入到小數 2 位 |
-| 測試 | pytest | 測試 HTTP 用 `TestClient`(依赖 httpx) |
+| 測試 | pytest | 測試 HTTP 用 `TestClient`(依賴 httpx) |
 | 套件管理 | pip + venv | 套件**只裝在 `.venv` 內**,不得裝到系統 Python |
 
 依賴白名單(只允許下列套件):
@@ -82,7 +93,7 @@ python -m cart.cli tests/fixtures/case_a.txt tests/fixtures/case_b.txt
 
 ```
 shopping_cart/
-├── docs/              # 需求與架構文件
+├── docs/              # 文件(requirements / feature-checklist / test-checklist / architecture / decisions / acceptance-report)
 ├── data/              # 資料檔(seed.json;runtime.json 執行時產生,已 gitignore)
 ├── src/cart/
 │   ├── main.py        # FastAPI 進入點
@@ -93,7 +104,7 @@ shopping_cart/
 │   ├── api/           # API 層:schema、router(極薄)
 │   ├── cli/           # 命令列工具與文字解析
 │   └── web/           # 前端靜態檔
-└── tests/             # unit / api / fixtures
+└── tests/             # unit / api / acceptance / fixtures
 ```
 
 **依賴方向:`api → services → domain`;`domain` 不得 import FastAPI 或任何 web 模組。**
@@ -143,155 +154,17 @@ shopping_cart/
 - 插入資料時用 `textContent` 或建立元素,**不把資料直接拼進 `innerHTML`**
 - 載入中 / 成功 / 失敗三種狀態都要處理
 
-## 六、需求清單(業務規則)
+## 六、現況摘要
 
-### 結算主流程
+題目核心「依促銷與優惠券算出結算金額」**已完整實作並通過驗收案例**(case_a `3083.60`、case_b `43.54`,`pytest` 74 passed)。
 
-1. **促銷折扣**:僅在結算日 = 促銷日期時生效,且只套用在對應品類。
-2. **優惠券有效期**:結算日 ≤ 到期日即有效(含當天)。
-3. **優惠券門檻**:以**促銷折扣後**金額判斷,≥ 門檻即成立。
-4. **每次結算只能用一張優惠券**。
-5. **金額**:一律 `Decimal`,最後四捨五入到小數 2 位。
-6. **當前日期**:可由後台手動覆寫,也可切回系統真實日期。
+尚未實作的部分集中在**後台管理**與**購物車持久化**,兩者都是題目未要求的加值範圍。完整清單(8 項,含各項現況與為何未做)與建議順序見 [docs/feature-checklist.md](docs/feature-checklist.md)。
 
-### 待決定(列為待辦,未實作)
+購物車目前只存在前端 JS 記憶體,重整頁面即清空;**金額的唯一信任來源是後端**,結算時後端只收商品名 + 數量,價格重取 `CATALOG`(見 [docs/decisions.md](docs/decisions.md) D4)。
 
-- 多張可用優惠券時,要「自動套用減額最大者」或「由使用者選擇」。**待確認後再補,不要自行假設。**
+## 七、Git 工作流
 
-### 驗收測試案例
-
-| 檔案 | 輸入摘要 | 預期輸出 |
-| --- | --- | --- |
-| `tests/fixtures/case_a.txt` | 電子品類 0.7 折促銷;ipad*1、顯示器*1、啤酒*12、麵包*5;優惠券門檻 1000 折 200 | `3083.60` |
-| `tests/fixtures/case_b.txt` | 無促銷;蔬菜*3、餐巾紙*8;無優惠券 | `43.54` |
-
-案例文字格式(未來 CLI parser 需解析):
-
-- 第 1 段:促銷,`日期|折扣|品類`,例如 `2015.11.11|0.7|電子`
-- 第 2 段:購物車明細,每行 `數量*商品:單價`,例如 `1*ipad:2399.00`
-- 第 3 段:結算日,例如 `2015.11.11`
-- 第 4 段:優惠券,`日期 門檻 折額`,例如 `2016.3.2 1000 200`
-- 段落之間以空行分隔;無該段時為空行
-
-### 商品目錄(MVP 預設值,之後可調整)
-
-4 類 18 項:
-
-| 品類 | 商品(單價) |
-| --- | --- |
-| 電子(5) | ipad 2399.00、iphone 5999.00、顯示器 1799.00、筆記型電腦 6999.00、鍵盤 349.00 |
-| 食品(6) | 麵包 9.00、餅乾 12.00、蛋糕 45.00、牛肉 88.00、魚 36.00、蔬菜 5.98 |
-| 日用品(4) | 餐巾紙 3.20、收納箱 59.00、咖啡杯 25.00、雨傘 39.00 |
-| 酒類(3) | 啤酒 25.00、白酒 128.00、伏特加 168.00 |
-
-## 七、功能盤點(前後端拆分,逐項勾選)
-
-> 依架構分成「後端」與「前端」兩大類(測試獨立一類),逐項列出完成狀態。標註「空殼」者代表檔案已建但只有模組 docstring、尚無邏輯。
-
-### 後端(api → services → domain)
-
-#### 領域層 domain/
-
-- [x] 商品目錄資料模型:`Category` 列舉(電子/食品/日用品/酒類)、`Product` 資料物件、`CATALOG`(4 類 18 項) — `domain/catalog.py`
-- [x] 依品類分組商品:`products_by_category()`,回傳順序依照 `Category` 定義順序 — `domain/catalog.py`
-- [x] 結算領域模型:`CartItem`、`Promotion`、`Coupon`、`Cart`(含 `subtotal()`)、`CheckoutInput` — `domain/models.py`
-- [x] 領域錯誤類型:`CheckoutError` 家族(解析格式、未知商品、單價不一致、券不可用等),供 API 層對應 HTTP 狀態碼 — `domain/errors.py`
-- [x] 金額規則:結算一律 `Decimal` 且四捨五入到小數 2 位(`round_to_two_places`) — `services/checkout.py`
-- [x] 依名稱查商品:`find_product_by_name()`,供解析層取品類與權威單價 — `domain/catalog.py`
-
-#### 服務層 services/
-
-- [x] 促銷折扣:僅在結算日 = 促銷日期時生效,且只套用在對應品類 — `services/checkout.py`
-- [x] 優惠券有效期:結算日 ≤ 到期日即有效(含當天) — `services/checkout.py`
-- [x] 優惠券門檻:以**促銷折扣後**金額判斷,≥ 門檻才成立 — `services/checkout.py`
-- [x] 單張優惠券限制:每次結算只能一張(由 `CheckoutInput.coupon: Coupon | None` 於模型層強制) — `services/checkout.py`
-- [ ] **待決定**:多張券可用時,自動套用減額最大者 or 由使用者選擇(確認後才實作,不假設)
-
-#### 資料層 repository/
-
-- [x] JSON 讀取:從 `data/seed.json` 讀促銷與優惠券、依 id 查券;`data/runtime.json` 讀寫「當前日期」覆寫 — `repository/json_store.py`
-- [ ] JSON 寫入:把後台異動(目錄/促銷/優惠券)寫回 `seed.json` — 尚未實作(後台管理功能暫緩)
-
-#### API 層 api/
-
-- [x] 商品瀏覽 API:`GET /api/products`,回傳 4 品類分組共 18 項,價格為字串 — `api/products.py`、`api/schemas.py`
-- [x] 回傳格式轉換純函式:`build_category_groups()`,不經過 HTTP 也能測 — `api/products.py`
-- [x] 結算 API:`POST /api/checkout` 收商品名+數量與券 id,回傳逐項金額明細;`GET /api/coupons` 列出可選優惠券 — `api/checkout.py`、`api/schemas.py`
-- [x] 結算金額由後端依 `CATALOG` 重取單價計算,不接受前端傳價(decisions.md D4) — `api/checkout.py`、`services/checkout.py`
-- [ ] 後台 API:商品目錄、促銷、優惠券管理 — `api/admin.py`(空殼,**此功能暫緩**)
-- [ ] 後台 API:手動覆寫「當前日期」,可切回系統真實日期 — `api/admin.py`(空殼;讀寫機制已在 `repository/json_store.py` 備妥,endpoint 尚未開)
-- [ ] 購物車 API:新增 / 修改 / 查詢購物車項目 — 尚未建立
-
-#### 進入點與設定
-
-- [x] FastAPI app 建立、API router 先註冊、靜態檔掛載在最後 — `main.py`
-- [x] 路徑集中設定:web 目錄、`data/` 目錄(以 `pathlib` 依檔案位置推算) — `config.py`
-- [x] 「當前日期」由最外層決定並往內傳:API 層讀 `runtime.json` 覆寫值,無覆寫才用 `date.today()`,service 不碰系統時間 — `api/checkout.py`、`repository/json_store.py`
-
-#### 命令列 cli/
-
-- [x] 文字解析:案例字串 → `CheckoutInput`,只解析不計算金額;品類與單價由 `CATALOG` 查得 — `cli/parser.py`
-- [x] CLI 入口:`python -m cart.cli <檔>...` 讀檔 → 解析 → 結算 → 印金額 — `cli/__main__.py`
-
-### 前端(web/)
-
-- [x] 頂部查詢框:輸入關鍵字即過濾目前頁面商品(依名稱不分大小寫比對,純前端不連後端) — `web/index.html`
-- [x] 分類導引欄:查詢框下方的橫向分頁(全部 + 4 品類),點擊只顯示該品項,並清掉搜尋關鍵字 — `web/index.html`
-- [x] 商品卡片:純 CSS 佔位圖(品類顏色 + 品名首字)、品名、單價 — `web/index.html`
-- [x] 加入購物車按鈕:每張卡片一顆,點擊把目前數量加進購物車並顯示「已加入購物車:{品名} × {數量}」提示 — `web/index.html`
-- [x] 數量調整元件:每張卡片上有 `- [數量] +`,最低 1,數量為 1 時停用減號鈕 — `web/index.html`
-- [x] 右下角懸浮購物車鈕:`position: fixed` 固定於畫面右下角,附商品總數角標(0 時隱藏) — `web/index.html`
-- [x] 前端購物車狀態:目前以 JS 物件存在記憶體,金額用整數分計算避免 float 小數誤差(見下方「購物車資料流向」) — `web/index.html`
-- [x] 三種狀態處理:載入中 / 成功 / 失敗(失敗時附錯誤與排除方式);查無商品時顯示「查無符合的商品」 — `web/index.html`
-- [x] 響應式版面:手機寬度可讀 — `web/index.html`
-- [x] 可見的鍵盤 focus 樣式 — `web/index.html`
-- [x] 無框架、免 build、資料以 `textContent` / 建立元素插入(不拼進 `innerHTML`) — `web/index.html`
-- [x] **獨立結帳頁**:點懸浮鈕整頁切換,左側購物車明細、右側結帳欄(優惠券下拉 + 逐項金額 + 確認結帳);空車顯示提示並停用結帳鈕 — `web/index.html`
-- [x] **優惠券選擇介面**:`GET /api/coupons` 載入券清單,選擇後即時重算並顯示券狀態(可使用 / 已過期 / 未達門檻) — `web/index.html`
-- [x] **結算金額明細**:原價合計、促銷折扣(附促銷名稱)、優惠券折抵、最終結算金額,全部由 `POST /api/checkout` 回傳 — `web/index.html`
-- [ ] 後台管理頁:商品 / 促銷 / 優惠券管理與當前日期切換 — `web/admin.html`(空殼,**此功能暫緩**)
-- [ ] 購物車頁面:修改 / 刪除已加入的商品(目前結帳頁只能瀏覽,尚不能編輯) — 尚未建立
-
-> 舊的購物籃下拉面板已移除,改由獨立結帳頁取代。
-
-### 測試 tests/
-
-- [x] 目錄單元測試:品類數、商品總數、各品類數量 5/6/4/3、價格皆為 `Decimal` — `tests/unit/test_catalog.py`
-- [x] builder 單元測試:直接測 `build_category_groups()`(不使用 `TestClient`),驗 4 組、18 項、價格字串、品類順序 — `tests/unit/test_products_builder.py`
-- [x] 商品 API 測試:`GET /api/products` 與 `GET /` 經 `TestClient` — `tests/api/test_products_api.py`
-- [x] 驗收案例 fixture:`case_a.txt`(預期 3083.60)、`case_b.txt`(預期 43.54) — `tests/fixtures/`
-- [x] 結算規則單元測試:促銷生效/不生效、券過期/門檻/促銷後門檻、四捨五入(22 項) — `tests/unit/test_checkout.py`
-- [x] 結算明細單元測試:`build_checkout_result` 的原價/促銷後/券折抵/券狀態(7 項) — `tests/unit/test_checkout_result.py`
-- [x] 解析器單元測試:日期/促銷/明細/優惠券解析、錯誤案例(18 項) — `tests/unit/test_parser.py`
-- [x] CLI 端對端測試:子程序執行 `python -m cart.cli`,印出預期金額與錯誤處理(5 項) — `tests/unit/test_cli.py`
-- [x] 結算 API 測試:`GET /api/coupons`、`POST /api/checkout` 含促銷生效、券三狀態與 400 錯誤(8 項) — `tests/api/test_checkout_api.py`
-- [x] 驗收案例端對端測試:讀 fixture → 解析 → 結算 → 比對 3083.60 / 43.54 — `tests/acceptance/test_cases.py`
-
-### 完成度摘要
-
-| 類別 | 已完成 | 總項目 |
-| --- | --- | --- |
-| 後端 | 19 | 22 |
-| 前端 | 15 | 17 |
-| 測試 | 10 | 10 |
-| **合計** | **44** | **49** |
-
-### 購物車資料流向(重要)
-
-目前購物車狀態**只存在前端 JS 記憶體**(`cart` 物件),重新整理頁面就會清空。**尚未透過後端 API 儲存**。完整的方案評估(為何不用 DB、為何不做登入、資料職責分類)見 [docs/decisions.md](docs/decisions.md),以下只列對實作的直接影響:
-
-- 後端結算 API(`POST /api/checkout`、`GET /api/coupons`)已實作,但**購物車本身**仍只存前端記憶體,沒有後端購物車 API。
-- 前端已把購物車操作集中在少數函式中(`addToCart`、`renderCartBadge`、`renderCheckoutItems`),日後接後端購物車 API 時,只要改這幾個函式內部去呼叫 API,明細與結帳欄的繪製邏輯都不用動。
-- 金額計算使用整數「分」(`priceToCents` / `centsToText`),避免 float 小數誤差,與後端 `Decimal` 的精神一致。
-- **金額的唯一信任來源是後端**:結算時後端只收商品名 + 數量,價格重取 `CATALOG`,不接受前端傳價(見 decisions.md D4)。
-
-未來接後端時已定案的方向(decisions.md D3):以 session 為購物車錨點,session id 放 `httpOnly` cookie;待需會員功能時才考慮登入系統。
-
-下一步建議順序:領域模型 → 結算服務 → CLI → 結算 API → 前端結帳頁(已完成)→ 後台發券(暫緩,待「多券擇優」定案)→ 後端購物車 API → 前端購物車編輯頁。每一層都先寫單元測試再實作。
-
-## 八、Git 工作流
-
-- 目前分支:`feature/project-skeleton`(已 commit 一次,尚未 push)
+- 目前分支:`feature/project-skeleton`(已 commit 5 次,尚未 push)
 - 不得在 `main` / `master` 上修改;完成後只 commit,**不要 push、不要 merge**
 - commit 前先跑 `pytest`,通過才 commit
-- `main` 上有兩個 untracked 的題目來源檔(`WisdomGarden (Dev) 面試題目.pdf`、`request.md`),**不納入版本控管**
+- 題目來源檔(`WisdomGarden (Dev) 面試題目.pdf`、`request.md`、`classHTML.md`、`productHTML.md`)為 untracked,**不納入版本控管**
