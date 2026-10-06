@@ -9,6 +9,7 @@
 | 業務規則、API 規格、驗收案例 | [docs/requirements.md](docs/requirements.md) |
 | 哪些功能已實作、哪些還沒、下一步順序 | [docs/feature-checklist.md](docs/feature-checklist.md) |
 | 測了什麼、測試覆蓋的缺口 | [docs/test-checklist.md](docs/test-checklist.md) |
+| 測試涵蓋哪些情境、想改數值時怎麼改 | [docs/test-coverage.md](docs/test-coverage.md) |
 | 分層依賴、模組職責 | [docs/architecture.md](docs/architecture.md) |
 | 評估過後不採用的方案與理由(為何不用 DB、為何不做登入等) | [docs/decisions.md](docs/decisions.md) |
 | 各功能的實作方式與 API 實測紀錄 | [docs/acceptance-report.md](docs/acceptance-report.md) |
@@ -143,9 +144,9 @@ shopping_cart/
 
 ## 六、現況摘要
 
-題目核心「依促銷與折價券算出結算金額」**已完整實作**,形態為一支無狀態計算 API:`POST /api/calculate`。基準案例 case-1(原 Case A) `total` 為 `3083.60`、case-2(原 Case B)為 `43.54`,`pytest` 53 passed,並以 curl 逐案例實測 8 組 JSON 全數吻合。
+題目核心「依促銷與折價券算出結算金額」**已完整實作**,形態為一支無狀態計算 API:`POST /api/calculate`。基準案例 case-1(原 Case A) `total` 為 `3083.60`、case-2(原 Case B)為 `43.54`,`pytest` 62 passed,並以 curl 逐案例實測全數吻合。
 
-規格要點(完整版見 [docs/requirements.md](docs/requirements.md)):促銷有乘法 `rate` 與加法 `effect`、可限 `date`/`category`;折價券可多張依序套用,欄位為 `minSpend` / `expiryDate` / `discount` / `effect`;**價格由請求 JSON 帶入**,不查目錄(見 [docs/decisions.md](docs/decisions.md) D6)。
+規格要點(完整版見 [docs/requirements.md](docs/requirements.md)):促銷有乘法 `rate` 與加法 `effect`、可限 `date`/`category`;**折價券每次結算只能用一張**(題目原文,只評估陣列第一張),欄位為 `minSpend` / `expiryDate` / `discount` / `effect`;**價格由請求 JSON 帶入**,不查目錄(見 [docs/decisions.md](docs/decisions.md) D6、D7)。
 
 ## 七、Git 工作流
 

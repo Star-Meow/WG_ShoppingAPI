@@ -96,7 +96,8 @@ def test_apply_coupon_marks_usable_when_date_and_threshold_met():
     assert result.reason is None
 
 
-def test_apply_coupons_applies_each_usable_coupon_in_order():
+def test_apply_coupons_uses_only_the_first_coupon():
+    # 題目明定每次結算只能用一張:只套用陣列第一張,其餘忽略
     coupons = [
         make_coupon(
             expiry_date=date(2016, 3, 2), min_spend=Decimal("1000"), discount=Decimal("500")
@@ -106,24 +107,41 @@ def test_apply_coupons_applies_each_usable_coupon_in_order():
         ),
     ]
     effect_sum, results = apply_coupons(coupons, Decimal("4899.30"), TRANSACTION_DATE)
-    assert effect_sum == Decimal("-700")
-    assert [r.applied for r in results] == [True, True]
+    assert effect_sum == Decimal("-500")
+    assert [r.applied for r in results] == [True]
 
 
-def test_apply_coupons_reports_skipped_coupons_and_keeps_others():
+def test_apply_coupons_ignores_later_coupons_even_when_first_is_skipped():
+    # 第一張未達門檻被跳過時,第二張也不會遞補上場(每次只能用一張)
     coupons = [
         make_coupon(
-            expiry_date=date(2016, 3, 2), min_spend=Decimal("1000"), discount=Decimal("200")
+            expiry_date=date(2016, 3, 2), min_spend=Decimal("10000"), discount=Decimal("500")
         ),
+        make_coupon(
+            expiry_date=date(2016, 3, 2), min_spend=Decimal("1"), discount=Decimal("200")
+        ),
+    ]
+    effect_sum, results = apply_coupons(coupons, Decimal("4899.30"), TRANSACTION_DATE)
+    assert effect_sum == Decimal("0")
+    assert len(results) == 1
+    assert results[0].applied is False
+    assert results[0].reason == REASON_BELOW_MIN_SPEND
+
+
+def test_apply_coupons_reports_first_expired_and_ignores_the_rest():
+    # 第一張過期時回報 expired,第二張無論有效與否都不列入結果
+    coupons = [
         make_coupon(
             expiry_date=date(2014, 3, 2), min_spend=Decimal("1000"), discount=Decimal("100")
         ),
+        make_coupon(
+            expiry_date=date(2016, 3, 2), min_spend=Decimal("1000"), discount=Decimal("200")
+        ),
     ]
     effect_sum, results = apply_coupons(coupons, Decimal("1500.00"), TRANSACTION_DATE)
-    assert effect_sum == Decimal("-200")
-    assert results[0].applied is True
-    assert results[1].applied is False
-    assert results[1].reason == REASON_EXPIRED
+    assert effect_sum == Decimal("0")
+    assert results[0].applied is False
+    assert results[0].reason == REASON_EXPIRED
 
 
 def test_apply_coupons_empty_list_has_no_effect():

@@ -38,7 +38,7 @@
 | `promotions[].date` / `category` | 否 | 省略代表不設限,對所有品項生效 |
 | `promotions[].rate` | 否 | 乘法,如 `0.7` |
 | `promotions[].effect` | 否 | 加法,如 `-50`(折扣)或 `+50`(服務費) |
-| `coupons` | 否 | 省略為空陣列;多張時**依序套用** |
+| `coupons` | 否 | 省略為空陣列;**每次結算只能用一張**,只評估陣列第一張,其餘忽略 |
 | `coupons[].discount` | 否 | 正數,套用時自動轉負 |
 | `coupons[].effect` | 否 | 直接指定加減值;**取值優先序:`effect` > `-discount` > `0`** |
 
@@ -56,7 +56,7 @@
 
 - `subtotal`:**不四捨五入**,忠實呈現計算過程
 - `total`:四捨五入到小數 2 位
-- `couponResults`:每張券的套用結果。`reason` 只有 `expired` / `below_min_spend` 兩種,套用成功為 `null`
+- `couponResults`:**只有第一張券**的套用結果(其餘不回報)。`reason` 只有 `expired` / `below_min_spend` 兩種,套用成功為 `null`
 
 ### 錯誤
 
@@ -75,7 +75,7 @@
 | 4 | **折價券門檻**:小計 < minSpend 即不生效,含等號;未指定門檻永遠達標 | `services/calculator.py::is_coupon_below_min_spend` |
 | 5 | **過期判斷優先於門檻判斷** | `services/calculator.py::apply_coupon` |
 | 6 | **折價券取值**:`effect` > `-discount` > `0` | `services/calculator.py::resolve_coupon_effect` |
-| 7 | **多張折價券**:依序套用於小計,`total = subtotal + Σ(已套用券 effect)` | `services/calculator.py::apply_coupons` |
+| 7 | **單張折價券**:**每次結算只能用一張**(題目原文),只評估陣列第一張,`total = subtotal + 已套用券 effect` | `services/calculator.py::apply_coupons` |
 | 8 | **四捨五入**:只在最後 `total` 做,`ROUND_HALF_UP` 到小數 2 位 | `services/calculator.py::round_to_two_places` |
 | 9 | **金額**:全程 `Decimal`,`subtotal` 不四捨五入 | 全專案 |
 | 10 | **品類**:自由字串,不由固定目錄約束 | `domain/models.py` |
@@ -91,9 +91,12 @@
 | `case-3.json` | 折價券已過期 | `5999.00` | `5999.00` | `[{0, false, "expired"}]` |
 | `case-4.json` | 促銷品類不匹配 | `698.00` | `698.00` | `[]` |
 | `case-5.json` | 促銷日期不匹配 | `698.00` | `698.00` | `[]` |
-| `case-6.json` | 多張折價券疊加 | `4899.300` | `4199.30` | `[{0, true, null}, {1, true, null}]` |
+| `case-6.json` | 第二張券被忽略(每次只能用一張) | `4899.300` | `4399.30` | `[{0, true, null}]` |
 | `case-7.json` | effect 為正數(服務費) | `100.00` | `100.00` | `[]` |
 | `case-8.json` | 浮點數精度 + 四捨五入 | `0.425` | `0.33` | `[{0, true, null}]` |
+| `case-10.json` | 多 rate 連乘 + 高額,第二張券被忽略 | `7199.2800` | `6699.28` | `[{0, true, null}]` |
+| `case-11.json` | 券 effect 優先 + 到期日當天 + 門檻含等號 | `0.99` | `0.69` | `[{0, true, null}]` |
+| `case-12.json` | 斜線日期 + 自由品類 + 促銷折抵 + 過期券 | `80.3500` | `60.35` | `[{0, true, null}]` |
 
 ### 基準案例計算過程(case-1)
 

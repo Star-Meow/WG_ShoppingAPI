@@ -1,0 +1,10 @@
+{
+  "date": "2015-11-11",
+  "items": [
+    {"name": "巧克力", "category": "食品", "qty": 1, "unitPrice": "0.99"}
+  ],
+  "promotions": [],
+  "coupons": [
+    {"expiryDate": "2015-11-11", "minSpend": "0.99", "discount": "0.50", "effect": "-0.30"}
+  ]
+}

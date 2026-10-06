@@ -1,0 +1,14 @@
+{
+  "date": "2015-11-11",
+  "items": [
+    {"name": "電視", "category": "電子", "qty": 1, "unitPrice": "9999.00"}
+  ],
+  "promotions": [
+    {"date": "2015-11-11", "category": "電子", "rate": "0.8"},
+    {"rate": "0.9"}
+  ],
+  "coupons": [
+    {"expiryDate": "2016-03-02", "minSpend": "1000", "discount": "500"},
+    {"expiryDate": "2016-03-02", "minSpend": "5000", "discount": "200"}
+  ]
+}

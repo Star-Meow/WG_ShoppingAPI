@@ -1,0 +1,15 @@
+{
+  "date": "2015/11/11",
+  "items": [
+    {"name": "牛奶", "category": "生活用品類", "qty": 2, "unitPrice": "45.50"},
+    {"name": "雞蛋", "category": "食品", "qty": 1, "unitPrice": "8.00"}
+  ],
+  "promotions": [
+    {"date": "2015/11/11", "category": "生活用品類", "rate": "0.85", "effect": "-10"},
+    {"category": "食品", "effect": "5"}
+  ],
+  "coupons": [
+    {"expiryDate": "2016/03/02", "minSpend": "50", "discount": "20"},
+    {"expiryDate": "2014/01/01", "minSpend": "1", "discount": "100"}
+  ]
+}

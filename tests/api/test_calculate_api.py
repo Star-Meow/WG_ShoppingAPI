@@ -44,11 +44,8 @@ CASE_EXPECTATIONS = {
     },
     "case-6.json": {
         "subtotal": "4899.300",
-        "total": "4199.30",
-        "couponResults": [
-            {"index": 0, "applied": True, "reason": None},
-            {"index": 1, "applied": True, "reason": None},
-        ],
+        "total": "4399.30",
+        "couponResults": [{"index": 0, "applied": True, "reason": None}],
     },
     "case-7.json": {
         "subtotal": "100.00",
@@ -58,6 +55,21 @@ CASE_EXPECTATIONS = {
     "case-8.json": {
         "subtotal": "0.425",
         "total": "0.33",
+        "couponResults": [{"index": 0, "applied": True, "reason": None}],
+    },
+    "case-10.json": {
+        "subtotal": "7199.2800",
+        "total": "6699.28",
+        "couponResults": [{"index": 0, "applied": True, "reason": None}],
+    },
+    "case-11.json": {
+        "subtotal": "0.99",
+        "total": "0.69",
+        "couponResults": [{"index": 0, "applied": True, "reason": None}],
+    },
+    "case-12.json": {
+        "subtotal": "80.3500",
+        "total": "60.35",
         "couponResults": [{"index": 0, "applied": True, "reason": None}],
     },
 }
@@ -151,4 +163,84 @@ def test_calculate_defaults_promotions_and_coupons_to_empty(client):
         "subtotal": "698.00",
         "total": "698.00",
         "couponResults": [],
+    }
+
+
+def test_calculate_prefers_coupon_effect_over_discount(client):
+    """規則 6:折價券同時帶 effect 與 discount 時,以 effect 為準( API 層以真實 JSON 驗證)。"""
+    response = client.post(
+        "/api/calculate",
+        json={
+            "date": "2015-11-11",
+            "items": [
+                {"name": "巧克力", "category": "食品", "qty": 1, "unitPrice": "0.99"}
+            ],
+            "promotions": [],
+            "coupons": [
+                {
+                    "expiryDate": "2015-11-11",
+                    "minSpend": "0.99",
+                    "discount": "0.50",
+                    "effect": "-0.30",
+                }
+            ],
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["total"] == "0.69"
+
+
+def test_calculate_runs_same_case_with_all_three_date_formats(client):
+    """同一組促銷與折價券,把交易日改成三種分隔格式,結果必須完全相同。"""
+    base_payload = {
+        "items": [
+            {"name": "牛奶", "category": "生活用品類", "qty": 2, "unitPrice": "45.50"},
+            {"name": "雞蛋", "category": "食品", "qty": 1, "unitPrice": "8.00"},
+        ],
+        "promotions": [
+            {
+                "date": "2015-11-11",
+                "category": "生活用品類",
+                "rate": "0.85",
+                "effect": "-10",
+            },
+            {"category": "食品", "effect": "5"},
+        ],
+        "coupons": [{"expiryDate": "2016-03-02", "minSpend": "50", "discount": "20"}],
+    }
+
+    results = []
+    for transaction_date in ("2015-11-11", "2015.11.11", "2015/11/11"):
+        response = client.post(
+            "/api/calculate",
+            json={"date": transaction_date, **base_payload},
+        )
+        assert response.status_code == 200
+        results.append(response.json())
+
+    assert results[0] == results[1] == results[2]
+    assert results[0]["total"] == "60.35"
+
+
+def test_calculate_applies_promotion_effect_before_coupon_threshold(client):
+    """促銷 effect 先納入小計,再以未四捨五入的小計判斷券門檻。"""
+    response = client.post(
+        "/api/calculate",
+        json={
+            "date": "2015-11-11",
+            "items": [
+                {"name": "餅乾", "category": "食品", "qty": 3, "unitPrice": "0.10"}
+            ],
+            "promotions": [{"effect": "0.10"}],
+            "coupons": [
+                {"expiryDate": "2016-03-02", "minSpend": "0.40", "discount": "0.10"}
+            ],
+        },
+    )
+    assert response.status_code == 200
+    # 0.30 + 0.10 = 0.40 恰到門檻(含等號),券生效
+    assert response.json() == {
+        "subtotal": "0.40",
+        "total": "0.30",
+        "couponResults": [{"index": 0, "applied": True, "reason": None}],
     }

@@ -60,6 +60,40 @@ def test_line_total_ignores_promotion_on_other_date():
     )
 
 
+def test_line_total_ignores_promotion_when_date_matches_but_category_does_not():
+    # 日期相符但品類不符:促銷不生效,短路在品類判斷上
+    item = make_item("鍵盤", "電子", 2, "349.00")
+    promotion = make_promotion(
+        category="日用品", rate="0.7", date_=TRANSACTION_DATE
+    )
+    assert calculate_line_total(item, [promotion], TRANSACTION_DATE) == Decimal(
+        "698.00"
+    )
+
+
+def test_line_total_ignores_promotion_when_both_conditions_do_not_match():
+    # 日期與品類都不符:任一條件短路即不生效
+    item = make_item("鍵盤", "電子", 2, "349.00")
+    promotion = make_promotion(
+        category="日用品", rate="0.5", date_=date(2015, 12, 25)
+    )
+    assert calculate_line_total(item, [promotion], TRANSACTION_DATE) == Decimal(
+        "698.00"
+    )
+
+
+def test_line_total_applies_effect_on_matching_date_only():
+    # 日期相符的 effect 促銷才納入;另一張日期不符的 effect 不列入
+    item = make_item("鍵盤", "電子", 2, "349.00")
+    promotions = [
+        make_promotion(effect="-100", date_=TRANSACTION_DATE),
+        make_promotion(effect="-500", date_=date(2015, 12, 25)),
+    ]
+    assert calculate_line_total(item, promotions, TRANSACTION_DATE) == Decimal(
+        "598.00"
+    )
+
+
 def test_line_total_multiplies_multiple_matching_rates():
     item = make_item("ipad", "電子", 1, "1000.00")
     promotions = [

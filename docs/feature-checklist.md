@@ -30,7 +30,7 @@
 - [x] 折價券過期判斷:交易日 > 到期日即失效,到期日當天有效;無到期日永不失效 — `services/calculator.py`
 - [x] 折價券門檻判斷:小計 < minSpend 即不生效(含等號);無門檻永遠達標 — `services/calculator.py`
 - [x] 折價券取值優先序:`effect` > `-discount` > `0` — `services/calculator.py`
-- [x] 多張折價券依序套用,過期判斷優先於門檻判斷 — `services/calculator.py`
+- [x] **折價券每次結算只能用一張**(題目原文),只評估陣列第一張,其餘忽略;過期判斷優先於門檻判斷 — `services/calculator.py`
 - [x] 金額規則:全程 `Decimal`,`total` 最後四捨五入到小數 2 位(`ROUND_HALF_UP`),`subtotal` 不四捨五入 — `services/calculator.py`
 
 ### API 層 `api/`
@@ -53,7 +53,7 @@
 | 3 | 折價券已過期 | `5999.00` |
 | 4 | 促銷品類不匹配 | `698.00` |
 | 5 | 促銷日期不匹配 | `698.00` |
-| 6 | 多張折價券疊加 | `4199.30` |
+| 6 | 只用第一張券(每次只能用一張) | `4399.30` |
 | 7 | effect 為正數(服務費) | `100.00` |
 | 8 | 浮點數精度 + 四捨五入 | `0.33` |
 

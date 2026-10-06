@@ -6,7 +6,9 @@
 計算流程:
     逐項 lineTotal = qty × unitPrice × Π(rate) + Σ(effect)
     subtotal      = Σ(lineTotal)
-    total         = subtotal + Σ(已套用券 effect),最後四捨五入到小數 2 位
+    total         = subtotal + 已套用券 effect,最後四捨五入到小數 2 位
+
+折價券每次結算只能用一張(題目明定):只評估輸入的第一張,其餘忽略。
 """
 
 from datetime import date
@@ -146,15 +148,20 @@ def apply_coupons(
     subtotal: Decimal,
     transaction_date: date,
 ) -> tuple[Decimal, list[CouponResult]]:
-    """依序套用所有折價券於小計,回傳(加減總和, 每張券的套用結果)。"""
-    coupon_effect_sum = Decimal("0")
-    results = []
-    for index, coupon in enumerate(coupons):
-        result = apply_coupon(coupon, index, subtotal, transaction_date)
-        results.append(result)
-        if result.applied:
-            coupon_effect_sum = coupon_effect_sum + resolve_coupon_effect(coupon)
-    return coupon_effect_sum, results
+    """套用折價券於小計,回傳(加減總和, 套用結果)。
+
+    題目明定「每次結算只能用一張」:只評估陣列第一張券,其餘忽略不計。
+    無折價券時加減總和為 0、結果為空清單。
+    """
+    if not coupons:
+        return Decimal("0"), []
+
+    first_coupon = coupons[0]
+    result = apply_coupon(first_coupon, 0, subtotal, transaction_date)
+    if not result.applied:
+        return Decimal("0"), [result]
+
+    return resolve_coupon_effect(first_coupon), [result]
 
 
 def calculate(input_data: CaseInput) -> CalculationResult:
